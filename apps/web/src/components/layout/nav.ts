@@ -144,6 +144,12 @@ export const NAV: NavItem[] = [
       { label: 'Paramètres', to: '/admin/settings', anyOf: ['admin.settings'] },
       { label: 'E-mail & notifications', to: '/admin/email', anyOf: ['email.configure'] },
       { label: 'Journal des e-mails', to: '/admin/email-log', anyOf: ['email.view_log'] },
+      { label: 'Tâches planifiées', to: '/admin/jobs', anyOf: ['admin.settings'] },
+      {
+        label: 'Mes notifications',
+        to: '/account/notifications',
+        anyOf: ['notifications.email.receive'],
+      },
       { label: 'Sauvegardes', to: '/admin/backups', anyOf: ['admin.backups'] },
     ],
   },
@@ -178,6 +184,13 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/payments',
   '/payments/cheques',
   '/payments/aging',
+  '/inventories',
+  '/adjustments',
+  '/supplier-returns',
+  '/stock/recall',
+  '/reorder',
+  '/account/notifications',
+  '/admin/jobs',
 ]);
 
 export const ACTIVITY_ICON = Activity;

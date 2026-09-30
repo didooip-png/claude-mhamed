@@ -76,6 +76,41 @@ const NotificationsPage = lazyPage(
   () => import('@/pages/notifications/notifications'),
   'NotificationsPage',
 );
+const InventoriesPage = lazyPage(
+  () => import('@/pages/stock-ops/inventory-pages'),
+  'InventoriesPage',
+);
+const InventoryDetailPage = lazyPage(
+  () => import('@/pages/stock-ops/inventory-pages'),
+  'InventoryDetailPage',
+);
+const AdjustmentsPage = lazyPage(
+  () => import('@/pages/stock-ops/adjustment-pages'),
+  'AdjustmentsPage',
+);
+const AdjustmentDetailPage = lazyPage(
+  () => import('@/pages/stock-ops/adjustment-pages'),
+  'AdjustmentDetailPage',
+);
+const SupplierReturnsPage = lazyPage(
+  () => import('@/pages/stock-ops/supplier-return-pages'),
+  'SupplierReturnsPage',
+);
+const NewSupplierReturnPage = lazyPage(
+  () => import('@/pages/stock-ops/supplier-return-pages'),
+  'NewSupplierReturnPage',
+);
+const SupplierReturnDetailPage = lazyPage(
+  () => import('@/pages/stock-ops/supplier-return-pages'),
+  'SupplierReturnDetailPage',
+);
+const RecallPage = lazyPage(() => import('@/pages/stock-ops/recall-reorder-pages'), 'RecallPage');
+const ReorderPage = lazyPage(() => import('@/pages/stock-ops/recall-reorder-pages'), 'ReorderPage');
+const MyNotificationsPage = lazyPage(
+  () => import('@/pages/notifications/my-notifications-page'),
+  'MyNotificationsPage',
+);
+const JobsPage = lazyPage(() => import('@/pages/admin/jobs-page'), 'JobsPage');
 const PosPage = lazyPage(() => import('@/pages/sales/pos-page'), 'PosPage');
 const OnHoldPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'OnHoldPage');
 const SaleDetailPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'SaleDetailPage');
@@ -265,6 +300,94 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'notifications', element: <NotificationsPage /> },
+      {
+        path: 'inventories',
+        element: (
+          <RequirePermission anyOf={['inventory.count', 'inventory.manage']}>
+            <InventoriesPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'inventories/:id',
+        element: (
+          <RequirePermission anyOf={['inventory.count', 'inventory.manage']}>
+            <InventoryDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'adjustments',
+        element: (
+          <RequirePermission anyOf={['adjustments.create', 'adjustments.validate']}>
+            <AdjustmentsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'adjustments/:id',
+        element: (
+          <RequirePermission anyOf={['adjustments.create', 'adjustments.validate']}>
+            <AdjustmentDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'supplier-returns',
+        element: (
+          <RequirePermission anyOf={['supplier_returns.manage']}>
+            <SupplierReturnsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'supplier-returns/new',
+        element: (
+          <RequirePermission anyOf={['supplier_returns.manage']}>
+            <NewSupplierReturnPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'supplier-returns/:id',
+        element: (
+          <RequirePermission anyOf={['supplier_returns.manage']}>
+            <SupplierReturnDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'stock/recall',
+        element: (
+          <RequirePermission anyOf={['lots.manage']}>
+            <RecallPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'reorder',
+        element: (
+          <RequirePermission anyOf={['receipts.create']}>
+            <ReorderPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'account/notifications',
+        element: (
+          <RequirePermission anyOf={['notifications.email.receive']}>
+            <MyNotificationsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'admin/jobs',
+        element: (
+          <RequirePermission anyOf={['admin.settings']}>
+            <JobsPage />
+          </RequirePermission>
+        ),
+      },
       {
         path: 'pos',
         element: (

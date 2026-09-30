@@ -1,6 +1,6 @@
 import type { Paginated } from '@pharmastock/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, Settings2 } from 'lucide-react';
 import * as React from 'react';
 import { Link, useNavigate } from 'react-router';
 import { DataTable, useTableState, type Column } from '@/components/data-table';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { api } from '@/lib/api';
+import { useCan } from '@/lib/auth';
 import { useFormat } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -145,6 +146,7 @@ export function NotificationBell() {
 /** Centre de notifications : toutes les notifications de l'utilisateur. */
 export function NotificationsPage() {
   const fmt = useFormat();
+  const can = useCan();
   const navigate = useNavigate();
   const markRead = useMarkRead();
   const state = useTableState();
@@ -210,11 +212,20 @@ export function NotificationsPage() {
         title="Notifications"
         description="Alertes et activité, selon vos abonnements."
         actions={
-          (list.data?.unread ?? 0) > 0 && (
-            <Button variant="outline" onClick={() => void markRead('all')}>
-              <CheckCheck /> Tout marquer comme lu
-            </Button>
-          )
+          <>
+            {(list.data?.unread ?? 0) > 0 && (
+              <Button variant="outline" onClick={() => void markRead('all')}>
+                <CheckCheck /> Tout marquer comme lu
+              </Button>
+            )}
+            {can('notifications.email.receive') && (
+              <Button variant="outline" asChild>
+                <Link to="/account/notifications">
+                  <Settings2 /> Gérer mes notifications
+                </Link>
+              </Button>
+            )}
+          </>
         }
       />
       <DataTable

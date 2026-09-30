@@ -115,7 +115,35 @@ facture PDF reçue par le serveur SMTP de test ; vente validée même SMTP coup�
 **Démonstration (critère de phase)** : scénarios 3 et 4 (retour partiel sur lot périmé puis quarantaine, avoir imputé ;
 règlements multiples, chèque impayé) et 14 autres cas (`test/returns-payments.test.ts`, 16 tests).
 
-## Phase 4 — Caisse, inventaire, ajustements, retours fournisseurs, alertes ⏳
+## Phase 4 — Caisse, inventaire, ajustements, retours fournisseurs, alertes ✅
+
+- **Sessions de caisse** : livrées en phase 2 (ouverture, comptage à l'aveugle, rapports X / Z, écart et alerte).
+- **Inventaire** (§6.12) : complet ou partiel (catégorie, laboratoire, emplacement, sélection de produits),
+  photographie du stock par lot, comptage à l'aveugle sur plusieurs postes en parallèle (scan ou saisie, boîtes +
+  unités), écart calculé sur le théorique **au moment du comptage** de la ligne, ajout d'un lot absent, recomptage
+  tracé, fin de comptage qui prévient l'administrateur, validation par corrections relatives
+  (`INVENTORY_ADJUSTMENT`), annulation, rapport des écarts Excel et PDF, un seul inventaire ouvert par produit.
+- **Ajustements** : perte, casse, destruction de périmés, correction ; déclaration par un préparateur (en attente),
+  validation ou rejet par l'administrateur (numéro `AJ-…`), procès-verbal de destruction imprimable.
+- **Retours fournisseurs** `RF-…` : sortie des lots, bon de retour imprimable, suivi de l'avoir fournisseur (attendu /
+  reçu), annulation avec réintégration.
+- **Rappel de lot** : recherche par numéro de lot, blocage à la vente, liste des clients concernés (nets des retours),
+  retour fournisseur prérempli.
+- **Mes notifications** : modes par événement (désactivé, cloche, e-mail immédiat, résumé quotidien / hebdomadaire),
+  employés suivis, seuils, hors horaires, heures d'envoi ; règle des alertes critiques (au moins un administrateur
+  reste abonné par e-mail).
+- **Résumés et rapport d'activité** : résumé quotidien / hebdomadaire sans doublon, rapport d'activité quotidien par
+  employé (e-mail et onglet « Activité du jour » du mouchard).
+- **Réapprovisionnement** : suggestions (stock maximum, consommation moyenne, délai fournisseur), alertes de rupture et
+  de passage sous le seuil à chaque franchissement.
+- **Tâches planifiées** : cohérence du stock (RG-22), intégrité du journal (RG-20), péremptions, factures échues avec
+  **relances** progressives, relevés mensuels ; une exécution par période, page d'administration avec lancement manuel.
+
+**Démonstration (critère de phase)** : scénario 6 (inventaire partiel → comptage → ajustements corrects, y compris un
+mouvement pendant le comptage) et scénario 7 (remise hors plafond : facture PDF reçue par le client, notification par
+e-mail à l'administrateur, rapport d'activité exact) — `test/stock-ops.test.ts` (7 tests) et
+`test/alerts-jobs.test.ts` (10 tests). La démonstration contient un inventaire validé, un inventaire en cours, des
+ajustements, des retours fournisseurs et une première passe des tâches planifiées.
 
 ## Phase 5 — Statistiques, rapports, exports ⏳
 

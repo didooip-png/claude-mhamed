@@ -62,6 +62,14 @@ Comptes de démonstration (seed) : `admin` / `Admin2026` (ADM01, PIN 1234), `pre
   (`components/override-dialog.tsx`). Libellé produit : `productLabel()` (évite le dosage en double).
 - Seed : les variables d'environnement (`DISABLE_SCHEDULER`) doivent être posées avant les imports
   dynamiques ; les tâches planifiées ne doivent pas tourner pendant le seed.
+- Tests : tous les fichiers partagent la même base de test. Un fichier qui change un état global (SMTP
+  activé, paramètres) le rétablit dans `afterAll`, et cherche ses e-mails par destinataire.
+- Stock : tout mouvement passe par `StockService.move` (verrous produits puis lots, soldes, alertes de
+  rupture au franchissement). Aucun autre code n'écrit `remaining_qty`.
+- Tâches planifiées : `JobsService` (une exécution par tâche et par période, `job_runs`) ; les résumés
+  passent par `DigestService` (`digest_runs`). Toute nouvelle tâche s'ajoute à la liste `jobs`.
+- Shell : ne jamais `pkill -f` un motif qui figure dans sa propre ligne de commande (le shell se tue) ;
+  arrêter l'API par son fichier PID (`restart-api.sh`).
 
 ## Conventions
 

@@ -29,6 +29,7 @@ import {
   THERAPEUTIC_CLASSES,
 } from './data.js';
 import { runDailyActivity, type SeedContext } from './history.js';
+import { seedStockOps } from './stock-ops.js';
 
 export const DEMO_USERS = [
   {
@@ -277,10 +278,12 @@ export async function seedDemo(app: INestApplicationContext): Promise<void> {
   for (let d = 1; d <= HISTORY_DAYS; d += 1) {
     await runDailyActivity(ctx, addDaysIso(start, d), d === HISTORY_DAYS);
   }
+  const stockOps = await seedStockOps(ctx);
   setSeedClock(null);
   // L'historique ancien ne doit pas générer de notifications : seules celles du dernier jour restent à traiter.
   await prisma.$executeRaw`UPDATE notification_events SET processed_at = created_at WHERE created_at < now() - interval '1 day' AND processed_at IS NULL`;
   console.log(`Historique de ventes : ${ctx.sales?.summary ?? 'aucune vente'}.`);
+  console.log(`Stock : ${stockOps}.`);
   console.log(
     `Démonstration prête : ${products.length} produits, ${supplierIds.length} fournisseurs, ${clientIds.length} clients, ${HISTORY_DAYS} jours d’historique.`,
   );

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActivityTab } from './activity-tab';
 import { api, errorText } from '@/lib/api';
 import { useFormat } from '@/lib/format';
 import { platform } from '@/lib/platform';
@@ -402,6 +403,7 @@ export function AuditPage() {
           <TabsTrigger value="journal">Journal</TabsTrigger>
           <TabsTrigger value="cancelled">Ventes annulées</TabsTrigger>
           <TabsTrigger value="indicators">Indicateurs par utilisateur</TabsTrigger>
+          <TabsTrigger value="activity">Activité du jour</TabsTrigger>
         </TabsList>
         <TabsContent value="journal">
           <AuditJournal />
@@ -411,6 +413,9 @@ export function AuditPage() {
         </TabsContent>
         <TabsContent value="indicators">
           <IndicatorsTab />
+        </TabsContent>
+        <TabsContent value="activity">
+          <ActivityTab />
         </TabsContent>
       </Tabs>
     </>

@@ -113,6 +113,7 @@ export class RecallService {
       lotNumber,
       lots: lots.map((l) => ({
         id: l.id,
+        lotNumber: l.lotNumber,
         product: l.product,
         supplier: l.supplier,
         status: l.status,

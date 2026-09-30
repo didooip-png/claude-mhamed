@@ -20,13 +20,20 @@ export function FormField({
   htmlFor?: string;
   children: React.ReactNode;
 }) {
+  // Le libellé est relié au champ (clic, lecteurs d'écran) même sans identifiant explicite.
+  const autoId = React.useId();
+  const id = htmlFor ?? autoId;
+  const field =
+    React.isValidElement<{ id?: string }>(children) && !children.props.id
+      ? React.cloneElement(children, { id })
+      : children;
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <Label htmlFor={htmlFor}>
+      <Label htmlFor={id}>
         {label}
         {required && <span className="ml-0.5 text-destructive">*</span>}
       </Label>
-      {children}
+      {field}
       {error ? (
         <p className="text-xs text-destructive">{error}</p>
       ) : hint ? (
