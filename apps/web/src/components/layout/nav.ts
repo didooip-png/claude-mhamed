@@ -146,7 +146,6 @@ export const NAV: NavItem[] = [
       { label: 'E-mail & notifications', to: '/admin/email', anyOf: ['email.configure'] },
       { label: 'Journal des e-mails', to: '/admin/email-log', anyOf: ['email.view_log'] },
       { label: 'Tâches planifiées', to: '/admin/jobs', anyOf: ['admin.settings'] },
-      { label: 'Sauvegardes', to: '/admin/backups', anyOf: ['admin.backups'] },
       {
         label: 'Mes notifications',
         to: '/account/notifications',

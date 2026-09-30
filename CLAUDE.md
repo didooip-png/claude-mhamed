@@ -68,6 +68,22 @@ Comptes de démonstration (seed) : `admin` / `Admin2026` (ADM01, PIN 1234), `pre
   rupture au franchissement). Aucun autre code n'écrit `remaining_qty`.
 - Tâches planifiées : `JobsService` (une exécution par tâche et par période, `job_runs`) ; les résumés
   passent par `DigestService` (`digest_runs`). Toute nouvelle tâche s'ajoute à la liste `jobs`.
+- Sauvegardes : `BackupService` (`pg_dump` + `pg_restore --list`, copie S3 SigV4, purge) ; tâche
+  `database-backup` ; les répertoires `backups/` sont ignorés par git **uniquement à la racine et sous
+  `apps/api/storage/`** (le module `src/modules/backups` doit rester versionné).
+- Base en production : deux comptes (propriétaire pour les migrations, `pharmastock_app` pour l'API).
+  Toute nouvelle table se termine par `SELECT pharmastock_apply_app_grants();` ; les journaux en ajout
+  seul ne reçoivent jamais `UPDATE`/`DELETE`.
+- Nouvelle route API : elle doit porter `@RequirePermission(...)`, sinon elle doit être ajoutée à la liste
+  fermée de `test/route-permissions.test.ts` (avec la raison). Ce test exécute l'audit des 401/403.
+- Recherche SQL sur de gros volumes : ne jamais mettre d'`OR` entre un `LIKE` indexé et une sous-requête
+  (parcours complet) ; résoudre les voies exactes d'abord, puis le texte, puis la tolérance aux fautes.
+  Mesurer avec `pnpm --filter @pharmastock/api test:load` (`LOAD_REUSE=1` pour ne pas régénérer les données).
+- Interface : CSP sans `unsafe-eval` → pas de `eval`/`new Function` (Zod est en mode `jitless` via
+  `public/zod-init.js`). Les listes de suggestions ne se ferment pas si le champ a repris le focus.
+- E2E (`e2e/`, Playwright) : données préparées par l'API (`support/data.ts`), parcours vérifié par l'interface ;
+  attendre la réponse serveur (`waitForResponse`) avant de payer un panier modifié ; boîte mail factice
+  `support/mail-sink.mjs`. Ne jamais lancer deux exécutions en même temps (ports 3300, 5273, 8026, 2525).
 - Shell : ne jamais `pkill -f` un motif qui figure dans sa propre ligne de commande (le shell se tue) ;
   arrêter l'API par son fichier PID (`restart-api.sh`).
 

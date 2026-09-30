@@ -169,6 +169,36 @@ ajustements, des retours fournisseurs et une première passe des tâches planifi
 retours et annulations réels (`test/reports.test.ts`, 8 tests), commandes et réceptions rattachées
 (`test/purchase-orders.test.ts`, 4 tests).
 
-## Phase 6 — Durcissement et mise en recette ⏳
+## Phase 6 — Durcissement et mise en recette ✅
+
+- **Sauvegardes** (§9) : `pg_dump` compressé et **vérifié** (`pg_restore --list`), empreinte SHA-256, copie hors site sur
+  stockage compatible S3 (signature SigV4 sans dépendance), purge selon la durée de conservation, tâche planifiée
+  quotidienne (`BACKUP_TIME`), page _Administration → Sauvegardes_ (historique, sauvegarde immédiate, téléchargement
+  tracé), commande `cli backup`, alerte critique en cas d'échec. Restauration vérifiée automatiquement : sauvegarde →
+  `pg_restore` dans une base temporaire → mêmes volumes (`test/backups.test.ts`).
+- **Déploiement Docker** : `docker-compose.prod.yml` (PostgreSQL 16 + API + Caddy HTTPS automatique), images
+  `docker/Dockerfile.api` (client PostgreSQL 16 inclus) et `docker/Dockerfile.web`, `.env.production.example`. Le
+  démarrage de l'API **sauvegarde avant de migrer** (et refuse de migrer si la sauvegarde échoue), crée le rôle
+  PostgreSQL restreint `pharmastock_app` et ré-applique ses droits. Job CI qui construit les images et démarre la pile.
+- **Sécurité** : test d'audit de toutes les routes (401 sans jeton, 403 pour le préparateur, liste fermée des routes sans
+  permission), revue automatisée (en-têtes, erreurs sans pile d'appels, corps trop volumineux → 413, caractère NUL → 400,
+  saisies hostiles, pièces jointes typées par leur contenu, secrets absents des réponses et du mouchard), correctifs
+  `pnpm audit` (aucune vulnérabilité connue), **CSP sans `unsafe-eval`** vérifiée dans un navigateur sur toutes les pages,
+  aperçu et impression de PDF compris.
+- **PWA** : service worker enregistré (production), mise en cache des seuls fichiers du site (jamais de données), proposition
+  de mise à jour sans interruption de vente.
+- **Performances** (`pnpm --filter @pharmastock/api test:load`) : 50 000 produits, 75 000 lots, 1 million de mouvements,
+  10 postes simultanés. La revue a fait passer la recherche produit de ≈ 700 ms à **≈ 55 ms** (trois voies indexées),
+  le contrôle nocturne de cohérence de 3,1 s à 0,3 s et le stock à date de 1,1 s à 0,55 s. Tous les objectifs du cahier
+  des charges sont tenus (recherche < 200 ms, vente < 500 ms, fiche de mouvement 12 mois < 2 s).
+- **Tests de bout en bout** (`e2e/`, Playwright) : API et site réels sur une base recréée, boîte de capture d'e-mails à la
+  place de Mailpit ; les **7 scénarios du cahier des charges** (vente FEFO, annulation, retour et avoir, crédit et
+  règlements, caisse à l'aveugle, inventaire partiel, e-mails et notifications avec panne SMTP).
+- **Documentation** : `docs/EXPLOITATION.md` (installation, HTTPS, mises à jour, sauvegardes et restauration, supervision,
+  SMTP/SPF/DKIM/DMARC, sécurité, performances, dépannage), `docs/GUIDE_UTILISATEUR.md` (20 captures d'écran), README.
+
+**Démonstration (critère de phase)** : pile de production décrite et validée (`docker compose config`, entrypoint
+exécuté sur une vraie base : première installation, mise à jour avec sauvegarde préalable, base à jour), sauvegarde
+restaurable, mesures de charge, 7 scénarios E2E verts.
 
 ## Phase 7 — Logiciel de bureau (après validation de la cliente) ⏳

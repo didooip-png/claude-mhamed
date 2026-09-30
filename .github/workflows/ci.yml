@@ -89,3 +89,46 @@ jobs:
       - name: Arrêt
         if: always()
         run: docker compose -f docker-compose.prod.yml --env-file .env.production down -v
+
+  e2e:
+    # Tests de bout en bout : vraie API, vrai site, base recréée, boîte mail factice.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pharmastock
+          POSTGRES_PASSWORD: pharmastock
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pharmastock"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Préparation
+        run: |
+          pnpm --filter @pharmastock/shared build
+          pnpm --filter @pharmastock/api db:generate
+      - name: Navigateur
+        run: pnpm --filter @pharmastock/e2e exec playwright install --with-deps chromium
+      - name: Scénarios
+        run: pnpm --filter @pharmastock/e2e e2e
+      - name: Rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results

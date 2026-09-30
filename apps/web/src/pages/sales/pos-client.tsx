@@ -88,7 +88,12 @@ export function ClientSearch({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onBlur={(e) => {
+          const input = e.currentTarget;
+          window.setTimeout(() => {
+            if (document.activeElement !== input) setOpen(false);
+          }, 150);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown') {
             e.preventDefault();

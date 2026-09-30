@@ -1,0 +1,24 @@
+{
+  "name": "@pharmastock/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests de bout en bout (Playwright) : API + site réels, base dédiée, serveur SMTP factice",
+  "scripts": {
+    "e2e": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/mailparser": "^3.9.0",
+    "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
+    "@types/smtp-server": "^3.5.13",
+    "mailparser": "^3.9.31",
+    "pg": "^8.23.0",
+    "smtp-server": "^3.19.15",
+    "typescript": "~6.0.3"
+  }
+}

@@ -71,7 +71,12 @@ export function LotPicker({
         placeholder={placeholder}
         className="pl-8"
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onBlur={(e) => {
+          const input = e.currentTarget;
+          window.setTimeout(() => {
+            if (document.activeElement !== input) setOpen(false);
+          }, 150);
+        }}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);

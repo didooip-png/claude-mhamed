@@ -99,7 +99,13 @@ export function ProductPicker({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onBlur={(e) => {
+          // Délai pour laisser passer le clic sur une suggestion ; pas de fermeture si le champ a repris le focus.
+          const input = e.currentTarget;
+          window.setTimeout(() => {
+            if (document.activeElement !== input) setOpen(false);
+          }, 150);
+        }}
         onKeyDown={async (e) => {
           if (e.key === 'ArrowDown') {
             e.preventDefault();

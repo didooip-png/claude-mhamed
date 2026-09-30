@@ -1,12 +1,28 @@
 # PharmaStock
 
 Logiciel de gestion de stock de médicaments (pharmacie / dépôt pharmaceutique) : lots et péremptions (FEFO/FIFO),
-ventes au comptoir, clients et comptes, règlements, retours et avoirs, caisse, inventaires, mouchard, statistiques,
-e-mails. Cahier des charges : [`docs/SPEC.md`](docs/SPEC.md) · Avancement : [`docs/PROGRESS.md`](docs/PROGRESS.md) ·
-Décisions : [`docs/DECISIONS.md`](docs/DECISIONS.md).
+ventes au comptoir, clients et comptes, règlements, retours et avoirs, caisse, inventaires, commandes fournisseurs,
+mouchard infalsifiable, statistiques et rapports, e-mails, sauvegardes.
 
-- **Étape 1** (en cours) : application web (navigateur, installable en PWA).
-- **Étape 2** : logiciel de bureau Windows (Electron) utilisant la même API et la même base.
+| Document                                                                          | Contenu                                                                                      |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [`docs/GUIDE_UTILISATEUR.md`](docs/GUIDE_UTILISATEUR.md)                          | Mode d'emploi pour l'équipe (préparateurs, administrateur), avec captures d'écran            |
+| [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md)                                    | Installation Docker, HTTPS, mises à jour, sauvegardes et restauration, supervision, sécurité |
+| [`docs/SPEC.md`](docs/SPEC.md)                                                    | Cahier des charges                                                                           |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) · [`docs/DECISIONS.md`](docs/DECISIONS.md) | Avancement par phase · décisions d'architecture et de gestion                                |
+
+- **Étape 1** (terminée, en recette) : application web (navigateur, installable en PWA).
+- **Étape 2** (à venir) : logiciel de bureau Windows (Electron) utilisant la même API et la même base.
+
+## Déploiement en production
+
+Docker Compose (PostgreSQL 16 + API + Caddy en HTTPS automatique) : voir [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md).
+
+```bash
+cp .env.production.example .env.production        # renseigner domaine et secrets
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env.production exec api node dist/src/cli.js setup
+```
 
 ## Prérequis
 
@@ -46,12 +62,14 @@ Ces comptes n'existent **jamais** en production : la première installation se f
 
 ## Commandes
 
-| Commande                                        | Rôle                                                                            |
-| ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `pnpm dev`                                      | Paquet partagé (watch) + API + site                                             |
-| `pnpm lint` / `pnpm format`                     | ESLint / Prettier                                                               |
-| `pnpm typecheck`                                | Vérification des types de tout le monorepo                                      |
-| `pnpm test`                                     | Tests unitaires et d'intégration (base `pharmastock_test`)                      |
-| `pnpm build`                                    | Build de production                                                             |
-| `pnpm db:seed`                                  | Données de démonstration                                                        |
-| `pnpm --filter @pharmastock/api cli <commande>` | `setup`, `devices`, `approve-device <id>`, `unlock-user <code>`, `verify-audit` |
+| Commande                                        | Rôle                                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `pnpm dev`                                      | Paquet partagé (watch) + API + site                                                       |
+| `pnpm lint` / `pnpm format`                     | ESLint / Prettier                                                                         |
+| `pnpm typecheck`                                | Vérification des types de tout le monorepo                                                |
+| `pnpm test`                                     | Tests unitaires et d'intégration (base `pharmastock_test`)                                |
+| `pnpm --filter @pharmastock/api test:load`      | Tests de charge (50 000 produits, 1 M de mouvements, base `pharmastock_load`)             |
+| `pnpm --filter @pharmastock/e2e e2e`            | Tests de bout en bout Playwright (API + site + boîte mail factice)                        |
+| `pnpm build`                                    | Build de production                                                                       |
+| `pnpm db:seed`                                  | Données de démonstration                                                                  |
+| `pnpm --filter @pharmastock/api cli <commande>` | `setup`, `devices`, `approve-device <id>`, `unlock-user <code>`, `verify-audit`, `backup` |
