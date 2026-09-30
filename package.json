@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "pnpm -r --filter ./packages/** --filter ./apps/** run build",
+    "build": "pnpm --filter @pharmastock/shared build && pnpm --filter @pharmastock/api build && pnpm --filter @pharmastock/web build",
     "dev": "pnpm --filter @pharmastock/shared build && pnpm -r --parallel --filter @pharmastock/shared --filter @pharmastock/api --filter @pharmastock/web run dev",
     "lint": "eslint .",
     "format": "prettier --write .",

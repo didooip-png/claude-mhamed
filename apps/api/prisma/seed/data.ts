@@ -998,7 +998,7 @@ export function seedClients(): SeedClient[] {
   const out: SeedClient[] = [];
   for (let i = 0; i < 24; i += 1) {
     const first = FIRST[i % FIRST.length]!;
-    const last = LAST[(i * 7) % LAST.length]!;
+    const last = LAST[(i * 7 + Math.floor(i / FIRST.length) * 3) % LAST.length]!;
     const hasEmail = i % 3 !== 0;
     out.push({
       type: 'INDIVIDUAL',

@@ -530,6 +530,52 @@ describe('Ventes — caisse', () => {
     ).toBe(0);
   });
 
+  it('rembourse par le mode d’origine : un paiement par carte ne sort rien du tiroir', async () => {
+    const p = await stockedProduct(5);
+    const view = await draftWith(prep, (await createClient()).id, [{ productId: p.id, qty: 2 }]);
+    const half = Math.floor(view.totals.totalTtc / 2 / 10) * 10;
+    const res = await validate(prep, view.id, {
+      payments: [
+        { method: 'CASH', amount: half },
+        { method: 'CARD', amount: view.totals.totalTtc - half },
+      ],
+    }).expect(200);
+    const saleId = res.body.sale.id as string;
+    await t
+      .post(`/sales/${saleId}/cancel`, admin, {
+        reasonCode: 'OTHER',
+        reason: 'Test de remboursement',
+        refundMode: 'REFUND',
+      })
+      .expect(200);
+    const movements = await t.prisma.cashMovement.findMany({
+      where: { documentId: saleId, type: 'REFUND' },
+    });
+    expect(movements).toHaveLength(1);
+    expect(Number(movements[0]!.amount)).toBe(-half);
+    const payments = await t.prisma.payment.findMany({ where: { saleId } });
+    expect(payments.every((x) => x.refundedAmount === x.amount)).toBe(true);
+    const client = await t.prisma.client.findUniqueOrThrow({
+      where: { id: res.body.sale.client.id },
+    });
+    expect(Number(client.balance)).toBe(0);
+  });
+
+  it('exporte le mouchard en Excel et en PDF, et l’export est tracé', async () => {
+    const before = await t.prisma.auditLog.count({ where: { eventType: 'DATA_EXPORTED' } });
+    const xlsx = await binary(t.get('/audit/export?format=xlsx', admin)).expect(200);
+    expect(xlsx.headers['content-type']).toContain('spreadsheetml');
+    expect((xlsx.body as Buffer).subarray(0, 2).toString()).toBe('PK');
+    const pdf = await binary(
+      t.get(`/audit/export?format=pdf&eventType=SALE_CANCELLED`, admin),
+    ).expect(200);
+    expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+    expect(await t.prisma.auditLog.count({ where: { eventType: 'DATA_EXPORTED' } })).toBe(
+      before + 2,
+    );
+    await t.get('/audit/export', prep).expect(403);
+  });
+
   it('refuse au préparateur les écrans d’administration de la phase 2', async () => {
     await t.get('/cash/sessions', prep).expect(403);
     await t.get('/email/smtp', prep).expect(403);

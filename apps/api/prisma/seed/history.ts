@@ -6,6 +6,7 @@ import type { ReceiptsService } from '../../src/modules/receipts/receipts.servic
 import type { PrismaService } from '../../src/prisma/prisma.service.js';
 import type { rng, SeedClient, SeedProduct } from './data.js';
 import { supplierFor } from './demo.js';
+import { SalesHistory } from './sales-history.js';
 
 export interface SeedContext {
   app: INestApplicationContext;
@@ -14,7 +15,14 @@ export interface SeedContext {
   at: (day: string, hour: number, minute?: number) => Date;
   start: string;
   today: string;
-  actors: { admin: Actor; adminReserve: Actor; pre1: Actor; pre2: Actor; pre1Reserve: Actor };
+  actors: {
+    admin: Actor;
+    admin2: Actor;
+    adminReserve: Actor;
+    pre1: Actor;
+    pre2: Actor;
+    pre1Reserve: Actor;
+  };
   products: {
     id: string;
     seed: SeedProduct;
@@ -28,6 +36,7 @@ export interface SeedContext {
   clientIds: string[];
   clientsData: SeedClient[];
   receipts: ReceiptsService;
+  sales?: SalesHistory;
 }
 
 /** Activité d'une journée d'historique (appelée dans l'ordre chronologique). */
@@ -38,7 +47,10 @@ export async function runDailyActivity(
 ): Promise<void> {
   const weekday = weekdayOf(day); // 0 = lundi … 6 = dimanche
   if (weekday === 6) return; // fermé le dimanche
+  // Réapprovisionnement à l'ouverture (avant les ventes de la journée).
   if (!isToday && (weekday === 1 || weekday === 4)) await replenish(ctx, day);
+  ctx.sales ??= new SalesHistory(ctx);
+  await ctx.sales.runDay(day, weekday, isToday, new Date());
 }
 
 /** Réapprovisionnement deux fois par semaine : les produits sous le point de commande. */
@@ -58,7 +70,7 @@ async function replenish(ctx: SeedContext, day: string): Promise<void> {
       bySupplier.set(supplierId, [...(bySupplier.get(supplierId) ?? []), p]);
     }
   }
-  let hour = 9;
+  let slot = 0;
   for (const [supplierId, products] of bySupplier) {
     const actor = ctx.random.chance(0.6) ? ctx.actors.pre1Reserve : ctx.actors.adminReserve;
     const lines = products.map((p) => {
@@ -75,7 +87,8 @@ async function replenish(ctx: SeedContext, day: string): Promise<void> {
         tvaRateBp: p.tvaBp,
       };
     });
-    setSeedClock(ctx.at(day, hour, ctx.random.int(0, 20)));
+    const base = 6 * 60 + 10 * slot;
+    setSeedClock(ctx.at(day, Math.floor(base / 60), base % 60));
     const draft = await ctx.receipts.createDraft(
       {
         sourceType: 'SUPPLIER',
@@ -90,12 +103,12 @@ async function replenish(ctx: SeedContext, day: string): Promise<void> {
       },
       actor,
     );
-    setSeedClock(ctx.at(day, hour, ctx.random.int(25, 55)));
+    setSeedClock(ctx.at(day, Math.floor((base + 6) / 60), (base + 6) % 60));
     await ctx.receipts.validate(
       draft.id,
       { acknowledgeWarnings: true, updateReferencePrices: false },
       actor,
     );
-    hour += 1;
+    slot += 1;
   }
 }

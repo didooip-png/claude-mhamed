@@ -18,3 +18,10 @@ export function formatStockQty(qtyBase: number, unitsPerPack: number, sellByUnit
 export function baseUnitLabel(sellByUnit: boolean, unitsPerPack: number): string {
   return sellByUnit && unitsPerPack > 1 ? 'unités' : 'boîtes';
 }
+
+/** Désignation d'un produit : nom + dosage, sans répéter le dosage s'il figure déjà dans le nom. */
+export function productLabel(p: { name: string; dosage?: string | null }): string {
+  if (!p.dosage) return p.name;
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+  return norm(p.name).includes(norm(p.dosage)) ? p.name : `${p.name} ${p.dosage}`;
+}

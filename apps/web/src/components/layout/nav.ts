@@ -168,6 +168,12 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/stock/expiries',
   '/stock/movements',
   '/stock/at-date',
+  '/pos',
+  '/sales',
+  '/sales/on-hold',
+  '/cash',
+  '/admin/email',
+  '/admin/email-log',
 ]);
 
 export const ACTIVITY_ICON = Activity;

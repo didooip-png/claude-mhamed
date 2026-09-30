@@ -9,6 +9,7 @@ import {
   formatMoney,
   formatStockQty,
   PAYMENT_METHODS,
+  productLabel,
   type SettingsMap,
 } from '@pharmastock/shared';
 import { AppError } from '../../common/app-error.js';
@@ -235,7 +236,7 @@ export class DocumentsService {
               {
                 stack: [
                   {
-                    text: `${l.product.name}${l.product.dosage ? ` ${l.product.dosage}` : ''}`,
+                    text: productLabel(l.product),
                     fontSize: 7.5,
                   },
                   {
@@ -440,7 +441,7 @@ export class DocumentsService {
                 {
                   stack: [
                     {
-                      text: `${l.product.name}${l.product.dosage ? ` ${l.product.dosage}` : ''}`,
+                      text: productLabel(l.product),
                       fontSize: 8.5,
                     },
                     {
@@ -689,6 +690,77 @@ export class DocumentsService {
         },
       ],
     });
+  }
+
+  // =========================================================================
+  // Rapports tabulaires (exports PDF : mouchard, états…)
+  // =========================================================================
+
+  /** Tableau A4 paysage avec en-tête de l'établissement ; l'export est tracé (DATA_EXPORTED). */
+  async tablePdf(
+    report: {
+      title: string;
+      subtitle?: string[];
+      columns: {
+        key: string;
+        header: string;
+        width?: number | '*' | 'auto';
+        align?: 'left' | 'right';
+      }[];
+      rows: Record<string, string | number | null>[];
+    },
+    actor: Actor,
+  ): Promise<Buffer> {
+    const e = await this.establishment();
+    const s = e.settings;
+    const pdf = await renderPdf({
+      pageSize: 'A4',
+      pageOrientation: 'landscape',
+      pageMargins: [28, 28, 28, 36],
+      defaultStyle: { font: 'Roboto', fontSize: 7.5 },
+      info: { title: report.title, author: s['establishment.name'] },
+      footer: this.footer(s),
+      content: [
+        { text: s['establishment.name'], bold: true, fontSize: 11, color: PRIMARY },
+        { text: report.title, bold: true, fontSize: 13, margin: [0, 2, 0, 2] },
+        ...(report.subtitle ?? []).map((t) => ({ text: t, fontSize: 8, color: '#444' })),
+        {
+          text: `Édité le ${formatDateTime(now(), s['general.timezone'])} par ${actor.userCode} — ${actor.userName}`,
+          fontSize: 7,
+          color: '#666',
+          margin: [0, 0, 0, 8],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: report.columns.map((c) => c.width ?? 'auto'),
+            body: [
+              report.columns.map((c) => ({
+                text: c.header,
+                bold: true,
+                fillColor: '#e6f2f1',
+                alignment: c.align ?? 'left',
+              })),
+              ...report.rows.map((r) =>
+                report.columns.map((c) => ({
+                  text: r[c.key] === null || r[c.key] === undefined ? '' : String(r[c.key]),
+                  alignment: c.align ?? 'left',
+                })),
+              ),
+            ],
+          },
+          layout: 'lightHorizontalLines',
+        },
+      ],
+    });
+    await this.audit.recordStandalone({
+      eventType: 'DATA_EXPORTED',
+      actor,
+      entityType: 'export',
+      summary: `Export PDF : ${report.title}${report.subtitle?.length ? ` (${report.subtitle.join(' ; ')})` : ''} — ${report.rows.length} ligne(s)`,
+      notify: false,
+    });
+    return pdf;
   }
 
   // =========================================================================

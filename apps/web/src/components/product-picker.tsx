@@ -1,4 +1,4 @@
-import { formatMoney, formatStockQty } from '@pharmastock/shared';
+import { formatMoney, formatStockQty, productLabel } from '@pharmastock/shared';
 import { Loader2, Search, Snowflake } from 'lucide-react';
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -154,8 +154,7 @@ export function ProductPicker({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-medium">{p.name}</span>
-                  {p.dosage && <span className="text-xs text-muted-foreground">{p.dosage}</span>}
+                  <span className="font-medium">{productLabel(p)}</span>
                   {!p.isActive && <Badge variant="gray">Archivé</Badge>}
                   {p.requiresPrescription && <Badge variant="blue">Ordonnance</Badge>}
                   {p.controlledClass !== 'NONE' && (

@@ -1,6 +1,6 @@
 import type { Paginated } from '@pharmastock/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ShieldCheck, ShieldX } from 'lucide-react';
+import { FileSpreadsheet, FileText, ShieldCheck, ShieldX } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { DataTable, useTableState, type Column } from '@/components/data-table';
@@ -9,9 +9,12 @@ import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input, NativeSelect } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, errorText } from '@/lib/api';
 import { useFormat } from '@/lib/format';
+import { platform } from '@/lib/platform';
 import { cn } from '@/lib/utils';
+import { CancelledSalesTab, IndicatorsTab } from './audit-sales-tabs';
 
 export interface AuditRow {
   id: number;
@@ -59,8 +62,8 @@ export function SeverityBadge({ severity }: { severity: AuditRow['severity'] }) 
   return <Badge variant={SEVERITY[severity].variant}>{SEVERITY[severity].label}</Badge>;
 }
 
-/** Mouchard / journal d'audit (§6.16). */
-export function AuditPage() {
+/** Onglet « Journal » du mouchard. */
+function AuditJournal() {
   const fmt = useFormat();
   const state = useTableState();
   const types = useAuditEventTypes();
@@ -75,6 +78,7 @@ export function AuditPage() {
     userId: state.filter('userId'),
     eventType: state.filter('eventType'),
     severity: state.filter('severity'),
+    entityId: state.filter('entityId'),
   };
   const list = useQuery({
     queryKey: ['audit', state.page, state.pageSize, state.q, filters],
@@ -85,20 +89,6 @@ export function AuditPage() {
     placeholderData: (prev) => prev,
   });
   const labelOf = (t: string) => types.data?.find((e) => e.type === t)?.label ?? t;
-
-  const verify = useMutation({
-    mutationFn: () =>
-      api.post<{ ok: boolean; checked: number; brokenAtId: number | null; reason: string | null }>(
-        '/audit/verify',
-      ),
-    onSuccess: (r) =>
-      r.ok
-        ? toast.success(`Journal intègre : ${r.checked.toLocaleString('fr-FR')} entrées vérifiées`)
-        : toast.error(`Intégrité compromise à l’entrée n° ${r.brokenAtId} : ${r.reason}`, {
-            duration: 20_000,
-          }),
-    onError: (err) => toast.error(errorText(err)),
-  });
 
   const columns: Column<AuditRow>[] = [
     {
@@ -151,15 +141,14 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader
-        title="Mouchard"
-        description="Journal infalsifiable de toutes les opérations sensibles (ajout seul, chaînage de hash)."
-        actions={
-          <Button variant="outline" onClick={() => verify.mutate()} loading={verify.isPending}>
-            <ShieldCheck /> Vérifier l’intégrité du journal
+      {filters.entityId && (
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <Badge variant="blue">Historique d’un élément</Badge>
+          <Button variant="ghost" size="sm" onClick={() => state.update({ entityId: null })}>
+            Voir tout le journal
           </Button>
-        }
-      />
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={list.data}
@@ -347,5 +336,83 @@ export function AuditDetail({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Mouchard / journal d'audit (§6.16) : journal, ventes annulées, indicateurs par utilisateur. */
+export function AuditPage() {
+  const state = useTableState();
+  const tab = state.filter('tab') || 'journal';
+  const verify = useMutation({
+    mutationFn: () =>
+      api.post<{ ok: boolean; checked: number; brokenAtId: number | null; reason: string | null }>(
+        '/audit/verify',
+      ),
+    onSuccess: (r) =>
+      r.ok
+        ? toast.success(`Journal intègre : ${r.checked.toLocaleString('fr-FR')} entrées vérifiées`)
+        : toast.error(`Intégrité compromise à l’entrée n° ${r.brokenAtId} : ${r.reason}`, {
+            duration: 20_000,
+          }),
+    onError: (err) => toast.error(errorText(err)),
+  });
+
+  const exportFile = async (format: 'xlsx' | 'pdf') => {
+    try {
+      const params = Object.fromEntries(
+        ['from', 'to', 'userId', 'eventType', 'severity', 'entityId', 'q'].map((k) => [
+          k,
+          state.filter(k),
+        ]),
+      );
+      const blob = await api.blob('/audit/export', { query: { ...params, format } });
+      platform.download(blob, `mouchard.${format}`);
+    } catch (err) {
+      toast.error(errorText(err));
+    }
+  };
+  return (
+    <>
+      <PageHeader
+        title="Mouchard"
+        description="Journal infalsifiable de toutes les opérations sensibles (ajout seul, chaînage de hash)."
+        actions={
+          <>
+            {tab === 'journal' && (
+              <>
+                <Button variant="outline" onClick={() => void exportFile('xlsx')}>
+                  <FileSpreadsheet /> Excel
+                </Button>
+                <Button variant="outline" onClick={() => void exportFile('pdf')}>
+                  <FileText /> PDF
+                </Button>
+              </>
+            )}
+            <Button variant="outline" onClick={() => verify.mutate()} loading={verify.isPending}>
+              <ShieldCheck /> Vérifier l’intégrité du journal
+            </Button>
+          </>
+        }
+      />
+      <Tabs
+        value={tab}
+        onValueChange={(v) => state.update({ tab: v === 'journal' ? null : v, q: null })}
+      >
+        <TabsList>
+          <TabsTrigger value="journal">Journal</TabsTrigger>
+          <TabsTrigger value="cancelled">Ventes annulées</TabsTrigger>
+          <TabsTrigger value="indicators">Indicateurs par utilisateur</TabsTrigger>
+        </TabsList>
+        <TabsContent value="journal">
+          <AuditJournal />
+        </TabsContent>
+        <TabsContent value="cancelled">
+          <CancelledSalesTab />
+        </TabsContent>
+        <TabsContent value="indicators">
+          <IndicatorsTab />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }

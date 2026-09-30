@@ -136,6 +136,7 @@ export async function seedDemo(app: INestApplicationContext): Promise<void> {
   };
   const actors = {
     admin: actorOf('ADM01', 'Comptoir 1'),
+    admin2: actorOf('ADM01', 'Comptoir 2'),
     adminReserve: actorOf('ADM01', 'Réserve'),
     pre1: actorOf('PRE01', 'Comptoir 1'),
     pre2: actorOf('PRE02', 'Comptoir 2'),
@@ -277,6 +278,9 @@ export async function seedDemo(app: INestApplicationContext): Promise<void> {
     await runDailyActivity(ctx, addDaysIso(start, d), d === HISTORY_DAYS);
   }
   setSeedClock(null);
+  // L'historique ancien ne doit pas générer de notifications : seules celles du dernier jour restent à traiter.
+  await prisma.$executeRaw`UPDATE notification_events SET processed_at = created_at WHERE created_at < now() - interval '1 day' AND processed_at IS NULL`;
+  console.log(`Historique de ventes : ${ctx.sales?.summary ?? 'aucune vente'}.`);
   console.log(
     `Démonstration prête : ${products.length} produits, ${supplierIds.length} fournisseurs, ${clientIds.length} clients, ${HISTORY_DAYS} jours d’historique.`,
   );

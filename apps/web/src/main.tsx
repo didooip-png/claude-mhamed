@@ -47,7 +47,7 @@ function Root() {
 
 function ThemedToaster() {
   const { theme } = useTheme();
-  return <Toaster richColors closeButton position="top-right" theme={theme} />;
+  return <Toaster richColors closeButton position="bottom-right" theme={theme} />;
 }
 
 createRoot(document.getElementById('root')!).render(

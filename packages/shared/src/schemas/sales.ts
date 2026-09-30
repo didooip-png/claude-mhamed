@@ -91,7 +91,8 @@ export const validateSaleSchema = z.object({
   /** Montant réglé avec l'avoir / le crédit disponible du client. */
   useCredit: positiveMillimesSchema.default(0),
   document: z.enum(['TICKET', 'A4', 'NONE']).default('TICKET'),
-  sendEmail: z.boolean().default(false),
+  /** Absent : règle automatique (mode « Automatique » + consentement) ; true / false : choix explicite. */
+  sendEmail: z.boolean().optional(),
   emailTo: z.email({ error: 'E-mail invalide' }).nullish(),
   pin: z
     .string()

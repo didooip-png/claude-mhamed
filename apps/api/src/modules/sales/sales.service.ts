@@ -607,10 +607,11 @@ export class SalesService {
             allocations: { include: { lot: { select: { lotNumber: true, expiryDate: true } } } },
           },
         },
-        allocations: { where: { cancelledAt: null }, include: { payment: true } },
+        // Toutes les affectations, y compris annulées (historique d'une vente annulée ou modifiée).
+        allocations: { include: { payment: true }, orderBy: { createdAt: 'asc' } },
         creditAllocs: {
-          where: { cancelledAt: null },
           include: { creditNote: { select: { number: true } } },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
@@ -817,6 +818,7 @@ export class SalesService {
           chequeNumber: a.payment.chequeNumber,
           bank: a.payment.bank,
           reference: a.payment.reference,
+          cancelledAt: a.cancelledAt,
         })),
         ...sale.creditAllocs.map((a) => ({
           kind: 'CREDIT_NOTE' as const,
@@ -825,6 +827,7 @@ export class SalesService {
           method: 'CREDIT_NOTE' as const,
           amount: a.amount,
           paidAt: a.createdAt,
+          cancelledAt: a.cancelledAt,
         })),
       ],
       createdBy: userOf(sale.createdById),
@@ -1239,17 +1242,19 @@ export class SalesService {
     });
 
     // --- E-mail de la facture (file d'envoi transactionnelle, jamais bloquant) -----------------
-    if (input.sendEmail || input.emailTo) {
+    // Choix explicite à la caisse (case cochée / adresse saisie) ou, à défaut, règle automatique.
+    const explicit = input.sendEmail === true || !!input.emailTo;
+    if (explicit || input.sendEmail === undefined) {
       const queued = await this.outbox.queueDocument(tx, {
         kind: 'INVOICE',
         entityType: 'sale',
         entityId: saleId,
         clientId: client.id,
         to: input.emailTo ? [input.emailTo] : undefined,
-        manual: !!input.emailTo || input.sendEmail === true,
+        manual: explicit,
         actor,
       });
-      if (!queued.queued) warnings.push(queued.reason);
+      if (!queued.queued && explicit) warnings.push(queued.reason);
     }
     return { number, due };
   }
@@ -1377,6 +1382,13 @@ export class SalesService {
     if (sale.status !== 'VALIDATED') throw new AppError('SALE_NOT_VALIDATED');
     if (sale.returnStatus !== 'NONE' || sale.lines.some((l) => l.returnedQtyBase > 0))
       throw new AppError('SALE_HAS_RETURNS');
+    // Client comptoir : jamais de crédit (RG-09), les règlements sont remboursés.
+    if (refundMode === 'CREDIT' && sale.client?.isWalkIn && sale.allocations.length > 0) {
+      throw new AppError('CREDIT_NOT_ALLOWED', undefined, {
+        message:
+          'Client comptoir : les règlements doivent être remboursés, pas convertis en crédit.',
+      });
+    }
     await this.ledger.lockClient(tx, sale.clientId!);
     await this.stock.lockProducts(
       tx,
@@ -1455,6 +1467,10 @@ export class SalesService {
   }
 
   /** Remboursement en espèces (sortie de caisse, session ouverte obligatoire). */
+  /**
+   * Remboursement par le mode d'origine : les espèces sortent du tiroir (session ouverte requise,
+   * RG-19) ; carte, chèque, virement… sont remboursés hors tiroir et seulement enregistrés.
+   */
   private async refundPayments(
     tx: Tx,
     clientId: string,
@@ -1466,8 +1482,20 @@ export class SalesService {
   ) {
     const total = parts.reduce((a, p) => a + p.amount, 0);
     if (total <= 0) return;
-    const session = actor.deviceId ? await this.cash.lockOpenSession(tx, actor.deviceId) : null;
-    if (!session)
+    const methods = new Map(
+      (
+        await tx.payment.findMany({
+          where: { id: { in: parts.map((p) => p.paymentId) } },
+          select: { id: true, method: true },
+        })
+      ).map((p) => [p.id, p.method]),
+    );
+    const cashTotal = parts
+      .filter((p) => methods.get(p.paymentId) === 'CASH')
+      .reduce((a, p) => a + p.amount, 0);
+    const session =
+      cashTotal > 0 && actor.deviceId ? await this.cash.lockOpenSession(tx, actor.deviceId) : null;
+    if (cashTotal > 0 && !session)
       throw new AppError('CASH_SESSION_REQUIRED', undefined, {
         message:
           'Un remboursement en espèces nécessite une session de caisse ouverte sur ce poste.',
@@ -1475,17 +1503,19 @@ export class SalesService {
     for (const part of parts) {
       await tx.$executeRaw`UPDATE payments SET refunded_amount = refunded_amount + ${part.amount} WHERE id = ${part.paymentId}::uuid`;
     }
-    await this.cash.addMovement(tx, {
-      sessionId: session.id,
-      type: 'REFUND',
-      amount: total,
-      documentType: 'SALE',
-      documentId,
-      documentRef: documentNumber,
-      reason: 'Remboursement',
-      actor,
-      at,
-    });
+    if (session) {
+      await this.cash.addMovement(tx, {
+        sessionId: session.id,
+        type: 'REFUND',
+        amount: cashTotal,
+        documentType: 'SALE',
+        documentId,
+        documentRef: documentNumber,
+        reason: 'Remboursement',
+        actor,
+        at,
+      });
+    }
     await this.ledger.post(tx, {
       clientId,
       type: 'REFUND',
@@ -1493,20 +1523,25 @@ export class SalesService {
       documentType: 'SALE',
       documentId,
       documentNumber,
-      description: `Remboursement en espèces (${documentNumber})`,
+      description:
+        cashTotal === total
+          ? `Remboursement en espèces (${documentNumber})`
+          : `Remboursement (${documentNumber})`,
       actor,
       at,
     });
-    await this.audit.record(tx, {
-      eventType: 'CASH_REFUND',
-      actor,
-      entityType: 'sale',
-      entityId: documentId,
-      entityRef: documentNumber,
-      summary: `Remboursement en espèces de ${money(total)} (${documentNumber})`,
-      after: { amount: total },
-      notify: { data: { amount: total } },
-    });
+    if (cashTotal > 0) {
+      await this.audit.record(tx, {
+        eventType: 'CASH_REFUND',
+        actor,
+        entityType: 'sale',
+        entityId: documentId,
+        entityRef: documentNumber,
+        summary: `Remboursement en espèces de ${money(cashTotal)} (${documentNumber})`,
+        after: { amount: cashTotal },
+        notify: { data: { amount: cashTotal } },
+      });
+    }
   }
 
   async cancel(saleId: string, input: CancelSaleInput, actor: Actor) {
@@ -1676,10 +1711,16 @@ export class SalesService {
           { transfer: { paymentIds, creditNoteIds }, excessMode: input.excessMode },
           warnings,
         );
+        const leftovers = (await this.ledger.creditSources(tx, clientId, true)).filter(
+          (s) => s.kind === 'PAYMENT' && paymentIds.includes(s.id),
+        );
+        const walkIn = (await tx.client.findUniqueOrThrow({ where: { id: clientId } })).isWalkIn;
+        if (walkIn && input.excessMode !== 'REFUND' && leftovers.length > 0) {
+          throw new AppError('CREDIT_NOT_ALLOWED', undefined, {
+            message: 'Client comptoir : l’excédent de règlements doit être remboursé.',
+          });
+        }
         if (input.excessMode === 'REFUND') {
-          const leftovers = (await this.ledger.creditSources(tx, clientId, true)).filter(
-            (s) => s.kind === 'PAYMENT' && paymentIds.includes(s.id),
-          );
           await this.refundPayments(
             tx,
             clientId,

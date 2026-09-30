@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { endOfLocalDayExclusive, startOfLocalDay, type PaginationQuery } from '@pharmastock/shared';
+import {
+  endOfLocalDayExclusive,
+  productLabel,
+  startOfLocalDay,
+  type PaginationQuery,
+} from '@pharmastock/shared';
 import { num } from '../../common/json.js';
 import { orderBy, pageArgs, paginated } from '../../common/pagination.js';
 import type { Actor } from '../../common/request-context.js';
@@ -218,7 +223,7 @@ export class SalesQueriesService {
           authorizedBy: u(s.cancelAuthorizedById),
           replacedBy: s.replacedBy,
           lines: s.lines.map((l) => ({
-            product: `${l.product.name}${l.product.dosage ? ` ${l.product.dosage}` : ''}`,
+            product: productLabel(l.product),
             qty: l.qty,
             unit: l.unit,
             total: l.lineTotalTtc,

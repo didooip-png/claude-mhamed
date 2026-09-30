@@ -427,5 +427,7 @@ export function defaultSettings(): SettingsMap {
 
 /** Paramètres qu'un utilisateur non administrateur peut lire (affichage, règles de caisse). */
 export const PUBLIC_SETTING_KEYS: SettingKey[] = SETTING_KEYS.filter(
-  (k) => !k.startsWith('email.') && k !== 'security.require_device_approval',
+  (k) =>
+    (!k.startsWith('email.') || k === 'email.auto_send') &&
+    k !== 'security.require_device_approval',
 );

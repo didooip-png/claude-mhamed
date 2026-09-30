@@ -1,25 +1,69 @@
+import * as React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { AppShell } from '@/components/layout/app-shell';
 import { EmptyState } from '@/components/page';
-import { AccountPage } from '@/pages/account/account-page';
-import { DevicesPage } from '@/pages/admin/devices-page';
-import { RolesPage } from '@/pages/admin/roles-page';
-import { SessionsPage } from '@/pages/admin/sessions-page';
-import { SettingsPage } from '@/pages/admin/settings-page';
-import { UsersPage } from '@/pages/admin/users-page';
-import { AuditPage } from '@/pages/audit/audit-page';
-import { ProductDetailPage } from '@/pages/catalog/product-detail-page';
-import { ProductsPage } from '@/pages/catalog/products-page';
-import { ReferencesPage } from '@/pages/catalog/references-page';
-import { ReceiptPage } from '@/pages/receipts/receipt-page';
-import { ReceiptsPage } from '@/pages/receipts/receipts-page';
-import { MovementSheetPage } from '@/pages/stock/movement-sheet-page';
-import { ExpiriesPage, LotsPage, StockAtDatePage, StockStatePage } from '@/pages/stock/stock-pages';
-import { ClientDetailPage } from '@/pages/tiers/client-detail-page';
-import { ClientsPage } from '@/pages/tiers/clients-page';
-import { SuppliersPage } from '@/pages/tiers/suppliers-page';
-import { DashboardPage } from '@/pages/dashboard/dashboard-page';
+import { Skeleton } from '@/components/ui/misc';
 import { RequirePermission } from './guards';
+
+/** Chargement à la demande d'une page (découpage du bundle par route). */
+function lazyPage<K extends string>(
+  load: () => Promise<Record<K, React.ComponentType<never>>>,
+  name: K,
+): React.ComponentType {
+  const Page = React.lazy(async () => ({
+    default: (await load())[name] as unknown as React.ComponentType,
+  }));
+  return function LazyPage() {
+    return (
+      <React.Suspense fallback={<Skeleton className="h-64" />}>
+        <Page />
+      </React.Suspense>
+    );
+  };
+}
+
+const AccountPage = lazyPage(() => import('@/pages/account/account-page'), 'AccountPage');
+const DevicesPage = lazyPage(() => import('@/pages/admin/devices-page'), 'DevicesPage');
+const RolesPage = lazyPage(() => import('@/pages/admin/roles-page'), 'RolesPage');
+const SessionsPage = lazyPage(() => import('@/pages/admin/sessions-page'), 'SessionsPage');
+const SettingsPage = lazyPage(() => import('@/pages/admin/settings-page'), 'SettingsPage');
+const UsersPage = lazyPage(() => import('@/pages/admin/users-page'), 'UsersPage');
+const AuditPage = lazyPage(() => import('@/pages/audit/audit-page'), 'AuditPage');
+const ProductDetailPage = lazyPage(
+  () => import('@/pages/catalog/product-detail-page'),
+  'ProductDetailPage',
+);
+const ProductsPage = lazyPage(() => import('@/pages/catalog/products-page'), 'ProductsPage');
+const ReferencesPage = lazyPage(() => import('@/pages/catalog/references-page'), 'ReferencesPage');
+const ReceiptPage = lazyPage(() => import('@/pages/receipts/receipt-page'), 'ReceiptPage');
+const ReceiptsPage = lazyPage(() => import('@/pages/receipts/receipts-page'), 'ReceiptsPage');
+const MovementSheetPage = lazyPage(
+  () => import('@/pages/stock/movement-sheet-page'),
+  'MovementSheetPage',
+);
+const ExpiriesPage = lazyPage(() => import('@/pages/stock/stock-pages'), 'ExpiriesPage');
+const LotsPage = lazyPage(() => import('@/pages/stock/stock-pages'), 'LotsPage');
+const StockAtDatePage = lazyPage(() => import('@/pages/stock/stock-pages'), 'StockAtDatePage');
+const StockStatePage = lazyPage(() => import('@/pages/stock/stock-pages'), 'StockStatePage');
+const ClientDetailPage = lazyPage(
+  () => import('@/pages/tiers/client-detail-page'),
+  'ClientDetailPage',
+);
+const ClientsPage = lazyPage(() => import('@/pages/tiers/clients-page'), 'ClientsPage');
+const SuppliersPage = lazyPage(() => import('@/pages/tiers/suppliers-page'), 'SuppliersPage');
+const DashboardPage = lazyPage(() => import('@/pages/dashboard/dashboard-page'), 'DashboardPage');
+const EmailLogPage = lazyPage(() => import('@/pages/admin/email-pages'), 'EmailLogPage');
+const EmailSettingsPage = lazyPage(() => import('@/pages/admin/email-pages'), 'EmailSettingsPage');
+const CashPage = lazyPage(() => import('@/pages/cash/cash-pages'), 'CashPage');
+const CashSessionPage = lazyPage(() => import('@/pages/cash/cash-pages'), 'CashSessionPage');
+const NotificationsPage = lazyPage(
+  () => import('@/pages/notifications/notifications'),
+  'NotificationsPage',
+);
+const PosPage = lazyPage(() => import('@/pages/sales/pos-page'), 'PosPage');
+const OnHoldPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'OnHoldPage');
+const SaleDetailPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'SaleDetailPage');
+const SalesPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'SalesPage');
 
 export const router = createBrowserRouter([
   {
@@ -145,6 +189,71 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission anyOf={['stock.view']}>
             <StockAtDatePage />
+          </RequirePermission>
+        ),
+      },
+      { path: 'notifications', element: <NotificationsPage /> },
+      {
+        path: 'pos',
+        element: (
+          <RequirePermission anyOf={['sales.create']}>
+            <PosPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'sales',
+        element: (
+          <RequirePermission anyOf={['sales.create']}>
+            <SalesPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'sales/on-hold',
+        element: (
+          <RequirePermission anyOf={['sales.hold']}>
+            <OnHoldPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'sales/:id',
+        element: (
+          <RequirePermission anyOf={['sales.create']}>
+            <SaleDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'cash',
+        element: (
+          <RequirePermission anyOf={['cash.operate', 'cash.view_expected']}>
+            <CashPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'cash/:id',
+        element: (
+          <RequirePermission anyOf={['cash.view_expected']}>
+            <CashSessionPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'admin/email',
+        element: (
+          <RequirePermission anyOf={['email.configure']}>
+            <EmailSettingsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'admin/email-log',
+        element: (
+          <RequirePermission anyOf={['email.view_log']}>
+            <EmailLogPage />
           </RequirePermission>
         ),
       },

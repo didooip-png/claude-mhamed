@@ -57,7 +57,44 @@ les mouvements avec utilisateur / date / heure et le solde exact. Tests d'intég
 (15 tests : coût avec UG, péremptions, unités, annulation, numérotation concurrente, fiche de mouvement, blocage de lot,
 péremptions, stock à date, import, clients). Parcours vérifié dans le navigateur (Playwright).
 
-## Phase 2 — Ventes et mouchard ⏳
+## Phase 2 — Ventes et mouchard ✅
+
+**Fait**
+
+- **Écran de caisse** (`/pos`, F12) au clavier et au scanner : acheteur obligatoire (recherche nom / code / téléphone / CIN,
+  création rapide, solde, crédit disponible, plafond restant, factures échues), ajout par code-barres ou recherche, aperçu
+  des lots qui seront sortis (FEFO / FIFO), boîte ou unité, remise ligne ou globale, prix modifiable, lot forcé,
+  équivalents en cas de rupture, ordonnance (prescripteur, numéro, date), vente en attente / reprise depuis tout poste,
+  paiements multiples (espèces avec rendu, carte, chèque, virement, traite, avoir / crédit client, reste à crédit),
+  validation idempotente, impression du ticket 80 mm ou de la facture A4, envoi de la facture par e-mail.
+  Raccourcis F1, F2, F3, F4, F6, F8, F9, F10, Suppr, Échap. Panier persisté côté serveur (reprise après coupure).
+- **Autorisation administrateur 🔑** réutilisable dans toute l'interface (remise, prix, lot forcé, crédit, modification).
+- **Validation transactionnelle** : verrous ordonnés, allocation des lots, mouvements `SALE_OUT`, numéro `FAC-AAAA-NNNNNN`,
+  règlements `REG-…`, écriture au compte client, mouvement de caisse, audit. Deux ventes simultanées sur le dernier article :
+  une seule réussit.
+- **Annulation et modification administrateur** (RG-11 à RG-13) : stock réintégré dans les lots d'origine, règlements
+  remboursés par leur mode d'origine ou convertis en crédit, `SALE_CANCELLED` / `SALE_MODIFIED` (critique) avec l'état
+  complet avant / après, notification immédiate de l'administrateur.
+- **Historique des ventes** (recherche, filtres, totaux), détail complet (lots, règlements, e-mails, historique au mouchard),
+  ventes en attente.
+- **Sessions de caisse** : ouverture avec fond, mouvements (sortie, apport, retrait, tiroir sans vente), clôture par
+  comptage à l'aveugle, écart calculé par le serveur, rapports X / Z (ticket PDF), alerte d'écart.
+- **Documents PDF** : facture A4 (HT, TVA par taux, timbre, TTC, montant en toutes lettres, reste à payer, lots),
+  ticket 80 mm, « DUPLICATA » / « ANNULÉE ».
+- **E-mail** : configuration SMTP (mot de passe chiffré, test de connexion et d'envoi, erreurs en français), modèles MJML
+  modifiables avec aperçu et restauration, file d'envoi transactionnelle avec reprises, quota horaire et journal (renvoyer,
+  annuler), envoi automatique de la facture aux clients consentants, envoi manuel avec confirmation.
+- **Notifications** : cloche, page des notifications, moteur d'abonnements (modes, employés suivis, seuils, hors horaires,
+  anti-rafale), alertes « trop d'annulations / de retraits de lignes ».
+- **Mouchard** : onglets Journal, **Ventes annulées** (avec total annulé), **Indicateurs par utilisateur**, historique d'un
+  document, export Excel / PDF (tracé).
+- **Démonstration** : 3 mois de ventes (plusieurs utilisateurs et postes), annulations, modifications, paniers abandonnés,
+  retraits de lignes, remises hors plafond, ventes à crédit, sessions de caisse avec écarts.
+
+**Démonstration (critère de phase)** : scénarios 1 et 2 (vente sur deux lots dans le bon ordre ; préparateur → annulation
+refusée → administrateur annule → entrée au mouchard, stock réintégré) ; deux ventes simultanées sur le dernier article ;
+facture PDF reçue par le serveur SMTP de test ; vente validée même SMTP coupé, e-mail réessayé puis envoyé au rétablissement
+(`test/sales.test.ts`, 17 tests). Parcours vérifié dans le navigateur (Playwright).
 
 ## Phase 3 — Retours, avoirs, comptes clients, règlements ⏳
 

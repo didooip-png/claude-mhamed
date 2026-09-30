@@ -35,6 +35,13 @@ Au premier lancement, le site demande un **nom de poste** (ex. « Comptoir 1 »)
 | PRE01 | `pre01`     | `Prep2026`   | 1111 | Préparateur    |
 | PRE02 | `pre02`     | `Prep2026`   | 2222 | Préparateur    |
 
+### Tester l'envoi d'e-mails en développement
+
+Mailpit (interface <http://localhost:8025>) reçoit tous les e-mails. Dans **Administration → E-mail & notifications**,
+saisir l'hôte `localhost`, le port `1025`, la sécurité « Aucune », un expéditeur (ex. `factures@example.com`),
+activer l'envoi, enregistrer, puis « Tester la connexion ». Les clients de démonstration avec adresse `@example.com`
+et consentement reçoivent leur facture PDF à la validation d'une vente.
+
 Ces comptes n'existent **jamais** en production : la première installation se fait avec `pnpm --filter @pharmastock/api cli setup`.
 
 ## Commandes

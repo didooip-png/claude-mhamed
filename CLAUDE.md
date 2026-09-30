@@ -51,6 +51,17 @@ Comptes de démonstration (seed) : `admin` / `Admin2026` (ADM01, PIN 1234), `pre
   `OverrideRequirements` + `OverrideService.resolve()` (erreur `OVERRIDE_REQUIRED` → le frontend
   redemande avec `override: { userCode, pin, reason }`).
 - Erreurs métier : `throw new AppError('CODE', details)` (codes et messages FR dans `shared/errors.ts`).
+- Ventes / caisse : ordre des verrous vente → client → produits (triés) → lots (triés) → session de
+  caisse → séquences → audit (en fin de transaction). Le compte client passe par `LedgerService.post`,
+  les encaissements par `PaymentsCoreService.create`, les mouvements d'espèces par `CashService`.
+- E-mail : jamais d'envoi direct dans une opération métier ; `EmailOutboxService.queueDocument(tx, …)`
+  insère dans la file (même transaction). Le corps des e-mails clients ne cite jamais de médicament.
+- Notifications : `audit.record(tx, { notify: … })` alimente `notification_events` ; le catalogue des
+  événements notifiables et leurs modes par défaut sont dans `packages/shared/src/notifications.ts`.
+- Interface : une action pouvant exiger 🔑 s'appelle via `withOverride(async (override) => api…)`
+  (`components/override-dialog.tsx`). Libellé produit : `productLabel()` (évite le dosage en double).
+- Seed : les variables d'environnement (`DISABLE_SCHEDULER`) doivent être posées avant les imports
+  dynamiques ; les tâches planifiées ne doivent pas tourner pendant le seed.
 
 ## Conventions
 

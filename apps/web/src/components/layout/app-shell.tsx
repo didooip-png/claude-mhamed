@@ -41,6 +41,8 @@ import { useAuth, useMe } from '@/lib/auth';
 import { useSettings } from '@/lib/queries';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
+import { OverrideDialogHost } from '@/components/override-dialog';
+import { NotificationBell } from '@/pages/notifications/notifications';
 import { AVAILABLE_ROUTES, NAV, type NavItem } from './nav';
 
 function useVisibleNav(): NavItem[] {
@@ -346,6 +348,7 @@ export function AppShell() {
   const me = useMe();
   const { state, logout, lock } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, setTheme } = useTheme();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [switchOpen, setSwitchOpen] = React.useState(false);
@@ -371,6 +374,8 @@ export function AppShell() {
   }, [navigate, me.permissions]);
 
   const deviceName = state.status === 'authenticated' ? state.deviceName : '';
+  // L'écran de caisse occupe toute la hauteur disponible.
+  const fullBleed = location.pathname === '/pos';
 
   return (
     <div className="flex h-dvh flex-col">
@@ -418,6 +423,7 @@ export function AppShell() {
             </button>
             <div className="ml-auto flex items-center gap-3">
               <ConnectionIndicator />
+              <NotificationBell />
               <Tooltip content="Poste de travail courant">
                 <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
                   <Monitor className="size-3.5" />
@@ -464,14 +470,21 @@ export function AppShell() {
             </div>
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-6">
-              <Outlet />
-            </div>
+            {fullBleed ? (
+              <div className="h-full p-3">
+                <Outlet />
+              </div>
+            ) : (
+              <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-6">
+                <Outlet />
+              </div>
+            )}
           </main>
         </div>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SwitchUserDialog open={switchOpen} onOpenChange={setSwitchOpen} />
+      <OverrideDialogHost />
     </div>
   );
 }

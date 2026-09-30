@@ -3,16 +3,20 @@
  * Mots de passe de démonstration documentés dans le README (jamais en production).
  */
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module.js';
-import { enableSeedClock } from '../src/common/clock.js';
-import { installBigIntJson } from '../src/common/json.js';
-import { loadConfig } from '../src/config.js';
-import { seedDemo } from './seed/demo.js';
+
+// Les tâches planifiées (envoi d'e-mails, notifications) ne doivent pas tourner pendant le seed :
+// la variable est positionnée AVANT le chargement des modules (les imports statiques sont hissés).
+process.env.DISABLE_SCHEDULER = 'true';
+
+const { NestFactory } = await import('@nestjs/core');
+const { AppModule } = await import('../src/app.module.js');
+const { enableSeedClock } = await import('../src/common/clock.js');
+const { installBigIntJson } = await import('../src/common/json.js');
+const { loadConfig } = await import('../src/config.js');
+const { seedDemo } = await import('./seed/demo.js');
 
 installBigIntJson();
 enableSeedClock();
-process.env.DISABLE_SCHEDULER = 'true';
 
 async function main(): Promise<void> {
   const config = loadConfig();
