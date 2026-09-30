@@ -38,7 +38,7 @@ export interface QueueInput {
   bcc?: string[];
   templateKey: string;
   payload?: Record<string, unknown>;
-  attachments?: { entityType: string; entityId: string }[];
+  attachments?: { entityType: string; entityId: string; params?: Record<string, unknown> }[];
   relatedEntityType?: string | null;
   relatedEntityId?: string | null;
   clientId?: string | null;
@@ -115,6 +115,11 @@ export class EmailOutboxService {
       kind: EmailDocumentKind;
       entityType: string;
       entityId: string;
+      /** Paramètres du document (ex. période d'un relevé). */
+      params?: Record<string, unknown>;
+      /** Entité affichée dans le journal (par défaut : le document lui-même). */
+      relatedEntityType?: string;
+      relatedEntityId?: string;
       clientId: string;
       to?: string[];
       cc?: string[];
@@ -158,9 +163,15 @@ export class EmailOutboxService {
       bcc: smtp.bccArchive ? [smtp.bccArchive] : [],
       templateKey: KIND_TEMPLATE[input.kind],
       payload: { message: input.message ?? '' },
-      attachments: [{ entityType: input.entityType, entityId: input.entityId }],
-      relatedEntityType: input.entityType,
-      relatedEntityId: input.entityId,
+      attachments: [
+        {
+          entityType: input.entityType,
+          entityId: input.entityId,
+          ...(input.params ? { params: input.params } : {}),
+        },
+      ],
+      relatedEntityType: input.relatedEntityType ?? input.entityType,
+      relatedEntityId: input.relatedEntityId ?? input.entityId,
       clientId: client.id,
       createdById: input.actor.userId,
     });
@@ -173,8 +184,10 @@ export class EmailOutboxService {
    */
   async sendDocument(
     input: {
-      entityType: 'sale';
+      entityType: 'sale' | 'credit_note' | 'payment' | 'statement';
+      /** Vente, avoir, règlement ; pour un relevé : le client. */
       entityId: string;
+      params?: Record<string, unknown>;
       to: string[];
       cc: string[];
       message?: string | null;
@@ -184,38 +197,95 @@ export class EmailOutboxService {
   ): Promise<{ outboxId: string }> {
     if (!(await this.smtp.isOperational())) throw new AppError('EMAIL_DISABLED');
     return this.prisma.tx(async (tx) => {
-      const sale = await tx.sale.findUnique({
-        where: { id: input.entityId },
-        include: { client: true },
-      });
-      if (!sale?.number || !sale.client) throw new AppError('NOT_FOUND');
-      if (sale.client.isWalkIn)
+      // Résout le document : client, nature, libellé et entité liée.
+      let target: {
+        clientId: string;
+        kind: EmailDocumentKind;
+        label: string;
+        relatedType: string;
+        relatedId: string;
+      };
+      if (input.entityType === 'sale') {
+        const sale = await tx.sale.findUnique({
+          where: { id: input.entityId },
+          select: { id: true, number: true, status: true, clientId: true },
+        });
+        if (!sale?.number || !sale.clientId) throw new AppError('NOT_FOUND');
+        target = {
+          clientId: sale.clientId,
+          kind: sale.status === 'CANCELLED' ? 'INVOICE_CANCELLED' : 'INVOICE',
+          label: `Facture ${sale.number}`,
+          relatedType: 'sale',
+          relatedId: sale.id,
+        };
+      } else if (input.entityType === 'credit_note') {
+        const note = await tx.creditNote.findUnique({
+          where: { id: input.entityId },
+          select: { id: true, number: true, clientId: true },
+        });
+        if (!note) throw new AppError('NOT_FOUND');
+        target = {
+          clientId: note.clientId,
+          kind: 'CREDIT_NOTE',
+          label: `Avoir ${note.number}`,
+          relatedType: 'credit_note',
+          relatedId: note.id,
+        };
+      } else if (input.entityType === 'payment') {
+        const payment = await tx.payment.findUnique({
+          where: { id: input.entityId },
+          select: { id: true, number: true, clientId: true },
+        });
+        if (!payment) throw new AppError('NOT_FOUND');
+        target = {
+          clientId: payment.clientId,
+          kind: 'PAYMENT_RECEIPT',
+          label: `Reçu ${payment.number}`,
+          relatedType: 'payment',
+          relatedId: payment.id,
+        };
+      } else {
+        target = {
+          clientId: input.entityId,
+          kind: 'STATEMENT',
+          label: 'Relevé de compte',
+          relatedType: 'client',
+          relatedId: input.entityId,
+        };
+      }
+      const client = await tx.client.findUnique({ where: { id: target.clientId } });
+      if (!client) throw new AppError('NOT_FOUND');
+      if (client.isWalkIn) {
         throw new AppError('EMAIL_INVALID', undefined, {
           message: 'Le client comptoir n’a pas d’adresse e-mail.',
         });
-      if (!sale.client.emailConsent && !input.confirmNoConsent)
+      }
+      if (!client.emailConsent && !input.confirmNoConsent)
         throw new AppError('EMAIL_CONSENT_REQUIRED');
-      const kind: EmailDocumentKind = sale.status === 'CANCELLED' ? 'INVOICE_CANCELLED' : 'INVOICE';
       const result = await this.queueDocument(tx, {
-        kind,
-        entityType: 'sale',
-        entityId: sale.id,
-        clientId: sale.client.id,
+        kind: target.kind,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        ...(input.params ? { params: input.params } : {}),
+        relatedEntityType: target.relatedType,
+        relatedEntityId: target.relatedId,
+        clientId: client.id,
         to: input.to,
         cc: input.cc,
         message: input.message ?? undefined,
         manual: true,
         actor,
       });
-      if (!result.queued || !result.outboxId)
+      if (!result.queued || !result.outboxId) {
         throw new AppError('EMAIL_DISABLED', undefined, { message: result.reason });
+      }
       await this.audit.record(tx, {
         eventType: 'EMAIL_SENT_MANUALLY',
         actor,
-        entityType: 'sale',
-        entityId: sale.id,
-        entityRef: sale.number,
-        summary: `Facture ${sale.number} envoyée par e-mail à ${input.to.join(', ')}${sale.client.emailConsent ? '' : ' (sans consentement, envoi confirmé)'}`,
+        entityType: target.relatedType,
+        entityId: target.relatedId,
+        entityRef: target.label,
+        summary: `${target.label} envoyé par e-mail à ${input.to.join(', ')}${client.emailConsent ? '' : ' (sans consentement, envoi confirmé)'}`,
         notify: false,
       });
       return { outboxId: result.outboxId };
@@ -267,9 +337,16 @@ export class EmailOutboxService {
         try {
           const vars: Record<string, unknown> = { ...(row.payload as Record<string, unknown>) };
           const attachments: { filename: string; content: Buffer; contentType: string }[] = [];
-          for (const ref of row.attachmentRefs as { entityType: string; entityId: string }[]) {
-            Object.assign(vars, await this.documents.emailVariables(ref.entityType, ref.entityId));
-            const pdf = await this.documents.pdfFor(ref.entityType, ref.entityId);
+          for (const ref of row.attachmentRefs as {
+            entityType: string;
+            entityId: string;
+            params?: Record<string, unknown>;
+          }[]) {
+            Object.assign(
+              vars,
+              await this.documents.emailVariables(ref.entityType, ref.entityId, ref.params),
+            );
+            const pdf = await this.documents.pdfFor(ref.entityType, ref.entityId, ref.params);
             attachments.push({ ...pdf, contentType: 'application/pdf' });
           }
           const rendered = await this.templates.render(row.templateKey, vars);
@@ -377,17 +454,37 @@ export class EmailOutboxService {
       }),
       this.prisma.emailOutbox.count({ where }),
     ]);
-    const saleIds = items
-      .filter((i) => i.relatedEntityType === 'sale' && i.relatedEntityId)
-      .map((i) => i.relatedEntityId!);
-    const sales = await this.prisma.sale.findMany({
-      where: { id: { in: saleIds } },
-      select: { id: true, number: true },
-    });
+    const idsOf = (type: string) =>
+      items
+        .filter((i) => i.relatedEntityType === type && i.relatedEntityId)
+        .map((i) => i.relatedEntityId!);
+    const [sales, notes, payments] = await Promise.all([
+      this.prisma.sale.findMany({
+        where: { id: { in: idsOf('sale') } },
+        select: { id: true, number: true },
+      }),
+      this.prisma.creditNote.findMany({
+        where: { id: { in: idsOf('credit_note') } },
+        select: { id: true, number: true },
+      }),
+      this.prisma.payment.findMany({
+        where: { id: { in: idsOf('payment') } },
+        select: { id: true, number: true },
+      }),
+    ]);
+    const numberOf = (type: string | null, id: string | null) =>
+      (type === 'sale'
+        ? sales
+        : type === 'credit_note'
+          ? notes
+          : type === 'payment'
+            ? payments
+            : []
+      ).find((x) => x.id === id)?.number ?? null;
     return paginated(
       items.map((i) => ({
         ...i,
-        documentNumber: sales.find((s) => s.id === i.relatedEntityId)?.number ?? null,
+        documentNumber: numberOf(i.relatedEntityType, i.relatedEntityId),
       })),
       total,
       q,
@@ -406,7 +503,11 @@ export class EmailOutboxService {
         bcc: row.bcc,
         templateKey: row.templateKey,
         payload: row.payload as Record<string, unknown>,
-        attachments: row.attachmentRefs as { entityType: string; entityId: string }[],
+        attachments: row.attachmentRefs as {
+          entityType: string;
+          entityId: string;
+          params?: Record<string, unknown>;
+        }[],
         relatedEntityType: row.relatedEntityType,
         relatedEntityId: row.relatedEntityId,
         clientId: row.clientId,

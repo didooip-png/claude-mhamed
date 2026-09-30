@@ -107,6 +107,12 @@ const definitions = {
     preparer: false,
     overridable: true,
   },
+  'returns.non_returnable': {
+    module: 'returns',
+    label: 'Accepter le retour d’un produit non retournable (froid, tableau)',
+    preparer: false,
+    overridable: true,
+  },
   'returns.cash_refund': {
     module: 'returns',
     label: 'Rembourser un retour en espèces',

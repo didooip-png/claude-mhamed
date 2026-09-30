@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { todayIso } from '@pharmastock/shared';
+import { endOfLocalDayExclusive, startOfLocalDay, todayIso } from '@pharmastock/shared';
 import { AppError } from '../../common/app-error.js';
 import { now } from '../../common/clock.js';
 import { num } from '../../common/json.js';
+import { pageArgs, paginated } from '../../common/pagination.js';
 import type { Actor } from '../../common/request-context.js';
 import type {
   ClientType,
@@ -274,6 +275,123 @@ export class LedgerService {
       overdueCount: overdue._count,
       overdueAmount: num(overdue._sum.amountDue),
       openInvoicesAmount: num(open._sum.amountDue),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Consultation du compte (§6.9)
+  // ---------------------------------------------------------------------------
+
+  /** Vue du compte : synthèse, avoirs et acomptes disponibles. */
+  async account(clientId: string) {
+    const summary = await this.summary(clientId);
+    const sources = await this.creditSources(this.prisma, clientId);
+    return { ...summary, creditSources: sources };
+  }
+
+  /** Grand livre paginé (le plus récent d'abord), avec le solde d'ouverture de la période. */
+  async ledgerPage(
+    clientId: string,
+    q: { page: number; pageSize: number; from?: string; to?: string },
+  ) {
+    const tz = await this.settings.get('general.timezone');
+    const from = q.from ? startOfLocalDay(q.from, tz) : undefined;
+    const to = q.to ? endOfLocalDayExclusive(q.to, tz) : undefined;
+    const where = {
+      clientId,
+      ...(from || to
+        ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } }
+        : {}),
+    };
+    const [items, total, opening] = await Promise.all([
+      this.prisma.clientLedger.findMany({ where, orderBy: { id: 'desc' }, ...pageArgs(q) }),
+      this.prisma.clientLedger.count({ where }),
+      this.openingBalance(clientId, from),
+    ]);
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(items.map((i) => i.userId))] } },
+      select: { id: true, code: true },
+    });
+    return {
+      ...paginated(
+        items.map((e) => ({
+          id: Number(e.id),
+          createdAt: e.createdAt,
+          entryType: e.entryType,
+          debit: e.debit,
+          credit: e.credit,
+          balanceAfter: e.balanceAfter,
+          documentType: e.documentType,
+          documentId: e.documentId,
+          documentNumber: e.documentNumber,
+          description: e.description,
+          user: users.find((u) => u.id === e.userId)?.code ?? null,
+        })),
+        total,
+        q,
+      ),
+      openingBalance: opening,
+    };
+  }
+
+  /** Solde avant `from` : somme des mouvements antérieurs (indépendante de l'ordre d'insertion). */
+  private async openingBalance(clientId: string, before?: Date): Promise<number> {
+    if (!before) return 0;
+    const agg = await this.prisma.clientLedger.aggregate({
+      where: { clientId, createdAt: { lt: before } },
+      _sum: { debit: true, credit: true },
+    });
+    return num(agg._sum.debit) - num(agg._sum.credit);
+  }
+
+  /** Relevé de compte sur une période : solde d'ouverture, mouvements, solde de clôture. */
+  async statement(clientId: string, fromDay: string, toDay: string) {
+    const tz = await this.settings.get('general.timezone');
+    const client = await this.prisma.client.findUnique({
+      where: { id: clientId },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        address: true,
+        phone: true,
+        email: true,
+        nationalIdOrTaxId: true,
+        type: true,
+        balance: true,
+        isWalkIn: true,
+      },
+    });
+    if (!client) throw new AppError('NOT_FOUND', { entity: 'client' });
+    const from = startOfLocalDay(fromDay, tz);
+    const to = endOfLocalDayExclusive(toDay, tz);
+    const opening = await this.openingBalance(clientId, from);
+    const entries = await this.prisma.clientLedger.findMany({
+      where: { clientId, createdAt: { gte: from, lt: to } },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    let running = opening;
+    const rows = entries.map((e) => {
+      running += num(e.debit) - num(e.credit);
+      return {
+        date: e.createdAt,
+        entryType: e.entryType,
+        documentNumber: e.documentNumber,
+        description: e.description,
+        debit: num(e.debit),
+        credit: num(e.credit),
+        balance: running,
+      };
+    });
+    return {
+      client,
+      from: fromDay,
+      to: toDay,
+      opening,
+      closing: running,
+      totalDebit: rows.reduce((a, r) => a + r.debit, 0),
+      totalCredit: rows.reduce((a, r) => a + r.credit, 0),
+      rows,
     };
   }
 }

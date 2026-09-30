@@ -989,6 +989,7 @@ model CreditNote {
   source          CreditNoteSource @default(RETURN)
   amount          BigInt
   remainingAmount BigInt           @map("remaining_amount")
+  printCount      Int              @default(0) @map("print_count")
   createdById     String           @map("created_by") @db.Uuid
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -1045,6 +1046,7 @@ model Payment {
   cancelledById  String?       @map("cancelled_by") @db.Uuid
   cancelledAt    DateTime?     @map("cancelled_at") @db.Timestamptz(3)
   cancelReason   String?       @map("cancel_reason")
+  printCount     Int           @default(0) @map("print_count")
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   client      Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)

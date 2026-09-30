@@ -46,44 +46,58 @@ export type PrescriptionInput = z.input<typeof prescriptionSchema>;
 
 export const PAYMENT_INPUT_METHODS = ['CASH', 'CARD', 'CHEQUE', 'TRANSFER', 'DRAFT_BILL'] as const;
 
-export const paymentInputSchema = z
-  .object({
-    method: z.enum(PAYMENT_INPUT_METHODS),
-    /** Montant affecté (en espèces : hors monnaie rendue). */
-    amount: positiveMillimesSchema.refine((v) => v > 0, { error: 'Montant obligatoire' }),
-    /** Espèces remises par le client (calcul du rendu). */
-    tendered: positiveMillimesSchema.optional(),
-    chequeNumber: z.string().trim().max(40).nullish(),
-    bank: z.string().trim().max(60).nullish(),
-    dueDate: isoDateSchema.nullish(),
-    reference: z.string().trim().max(80).nullish(),
-  })
-  .superRefine((p, ctx) => {
-    if (p.method === 'CHEQUE' && (!p.chequeNumber || !p.bank)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['chequeNumber'],
-        message: 'N° de chèque et banque obligatoires',
-      });
-    }
-    if (p.method === 'TRANSFER' && !p.reference) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['reference'],
-        message: 'Référence du virement obligatoire',
-      });
-    }
-    if (p.method === 'DRAFT_BILL' && !p.dueDate) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['dueDate'],
-        message: 'Échéance de la traite obligatoire',
-      });
-    }
-    if (p.tendered !== undefined && p.method === 'CASH' && p.tendered < p.amount) {
-      ctx.addIssue({ code: 'custom', path: ['tendered'], message: 'Montant remis insuffisant' });
-    }
-  });
+const paymentFields = {
+  method: z.enum(PAYMENT_INPUT_METHODS),
+  /** Montant affecté (en espèces : hors monnaie rendue). */
+  amount: positiveMillimesSchema.refine((v) => v > 0, { error: 'Montant obligatoire' }),
+  /** Espèces remises par le client (calcul du rendu). */
+  tendered: positiveMillimesSchema.optional(),
+  chequeNumber: z.string().trim().max(40).nullish(),
+  bank: z.string().trim().max(60).nullish(),
+  dueDate: isoDateSchema.nullish(),
+  reference: z.string().trim().max(80).nullish(),
+};
+
+interface PaymentDetails {
+  method: (typeof PAYMENT_INPUT_METHODS)[number];
+  amount: number;
+  tendered?: number | undefined;
+  chequeNumber?: string | null | undefined;
+  bank?: string | null | undefined;
+  dueDate?: string | null | undefined;
+  reference?: string | null | undefined;
+}
+
+/** Règles communes aux modes de paiement (chèque, virement, traite, espèces). */
+export function refinePayment(p: PaymentDetails, ctx: z.RefinementCtx): void {
+  if (p.method === 'CHEQUE' && (!p.chequeNumber || !p.bank)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['chequeNumber'],
+      message: 'N° de chèque et banque obligatoires',
+    });
+  }
+  if (p.method === 'TRANSFER' && !p.reference) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['reference'],
+      message: 'Référence du virement obligatoire',
+    });
+  }
+  if (p.method === 'DRAFT_BILL' && !p.dueDate) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['dueDate'],
+      message: 'Échéance de la traite obligatoire',
+    });
+  }
+  if (p.tendered !== undefined && p.method === 'CASH' && p.tendered < p.amount) {
+    ctx.addIssue({ code: 'custom', path: ['tendered'], message: 'Montant remis insuffisant' });
+  }
+}
+
+export const paymentInputSchema = z.object(paymentFields).superRefine(refinePayment);
+export { paymentFields };
 export type PaymentInput = z.input<typeof paymentInputSchema>;
 
 export const validateSaleSchema = z.object({

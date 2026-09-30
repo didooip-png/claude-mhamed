@@ -39,6 +39,7 @@ import { SettingsController } from './modules/settings/settings.controller.js';
 import { UsersController } from './modules/users/users.controller.js';
 import { UsersService } from './modules/users/users.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { AccountsController } from './modules/accounts/accounts.controller.js';
 import { LedgerService } from './modules/accounts/ledger.service.js';
 import { CashController } from './modules/cash/cash.controller.js';
 import { CashService } from './modules/cash/cash.service.js';
@@ -49,7 +50,11 @@ import { EmailOutboxService } from './modules/email/outbox.service.js';
 import { SmtpService } from './modules/email/smtp.service.js';
 import { NotificationsController } from './modules/notifications/notifications.controller.js';
 import { NotificationsService } from './modules/notifications/notifications.service.js';
+import { PaymentsController } from './modules/payments/payments.controller.js';
 import { PaymentsCoreService } from './modules/payments/payments-core.service.js';
+import { PaymentsService } from './modules/payments/payments.service.js';
+import { ReturnsController } from './modules/returns/returns.controller.js';
+import { ReturnsService } from './modules/returns/returns.service.js';
 import { SalesQueriesService } from './modules/sales/sales-queries.service.js';
 import { SalesController } from './modules/sales/sales.controller.js';
 import { SalesService } from './modules/sales/sales.service.js';
@@ -114,6 +119,9 @@ const config = loadConfig();
     CashController,
     EmailController,
     NotificationsController,
+    ReturnsController,
+    PaymentsController,
+    AccountsController,
   ],
   providers: [
     UsersService,
@@ -130,6 +138,8 @@ const config = loadConfig();
     ReceiptsService,
     LedgerService,
     PaymentsCoreService,
+    PaymentsService,
+    ReturnsService,
     CashService,
     SalesService,
     SalesQueriesService,

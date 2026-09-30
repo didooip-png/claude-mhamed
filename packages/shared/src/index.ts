@@ -13,3 +13,4 @@ export * from './schemas/catalog.js';
 export * from './stock.js';
 export * from './schemas/sales.js';
 export * from './notifications.js';
+export * from './schemas/accounts.js';

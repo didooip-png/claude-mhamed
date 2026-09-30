@@ -9,6 +9,7 @@ import {
   formatMoney,
   formatStockQty,
   PAYMENT_METHODS,
+  CLIENT_LEDGER_ENTRY_TYPES,
   productLabel,
   type SettingsMap,
 } from '@pharmastock/shared';
@@ -19,6 +20,7 @@ import type { Actor } from '../../common/request-context.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { LedgerService } from '../accounts/ledger.service.js';
 import { CashService } from '../cash/cash.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { renderPdf, TICKET_WIDTH, type DocDefinition } from './pdf.js';
@@ -45,6 +47,7 @@ export class DocumentsService {
     private readonly attachments: AttachmentsService,
     private readonly audit: AuditService,
     private readonly cash: CashService,
+    private readonly ledger: LedgerService,
   ) {}
 
   private async establishment(): Promise<Establishment> {
@@ -764,12 +767,608 @@ export class DocumentsService {
   }
 
   // =========================================================================
+  // Avoir / bon de retour, reçu de règlement, relevé de compte (§6.18)
+  // =========================================================================
+
+  private async loadReturn(returnId: string) {
+    const ret = await this.prisma.customerReturn.findUnique({
+      where: { id: returnId },
+      include: {
+        client: true,
+        sale: { select: { id: true, number: true } },
+        creditNote: {
+          include: {
+            allocations: {
+              where: { cancelledAt: null },
+              include: { sale: { select: { number: true } } },
+            },
+          },
+        },
+        lines: true,
+      },
+    });
+    if (!ret) throw new AppError('NOT_FOUND');
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: ret.lines.map((l) => l.productId) } },
+      select: { id: true, name: true, dosage: true, unitsPerPack: true, sellByUnit: true },
+    });
+    const lots = await this.prisma.lot.findMany({
+      where: { id: { in: ret.lines.map((l) => l.lotId) } },
+      select: { id: true, lotNumber: true },
+    });
+    const user = await this.prisma.user.findUnique({
+      where: { id: ret.createdById },
+      select: { code: true },
+    });
+    return { ret, products, lots, userCode: user?.code ?? '' };
+  }
+
+  /** Avoir `AV-` (ou bon de retour `RT-` pour le client comptoir), en A4 ou en ticket 80 mm. */
+  async returnPdf(returnId: string, format: DocumentFormat, duplicate: boolean): Promise<Buffer> {
+    const { ret, products, lots, userCode } = await this.loadReturn(returnId);
+    const e = await this.establishment();
+    const s = e.settings;
+    const tz = s['general.timezone'];
+    const m = (v: number | bigint | null | undefined, c = true) => this.money(v, s, c);
+    const note = ret.creditNote;
+    const title = note ? 'AVOIR' : 'BON DE RETOUR';
+    const number = note?.number ?? ret.number;
+    const applied = note?.allocations ?? [];
+    const remaining = note ? num(note.remainingAmount) : 0;
+    const cashRefund = ret.refundMode === 'CASH';
+    const lineRows = ret.lines.map((l) => {
+      const p = products.find((x) => x.id === l.productId);
+      return {
+        name: p ? productLabel(p) : '',
+        lot: lots.find((x) => x.id === l.lotId)?.lotNumber ?? '',
+        qty: p ? formatStockQty(l.qtyBase, p.unitsPerPack, p.sellByUnit) : String(l.qtyBase),
+        state: l.resellable
+          ? 'Revendable'
+          : l.destination === 'DESTRUCTION'
+            ? 'Détruit'
+            : 'Quarantaine',
+        amount: num(l.amount),
+      };
+    });
+    const summary = [
+      ...applied.map((a) => `Imputé sur la facture ${a.sale.number} : ${m(a.amount)}`),
+      ...(cashRefund
+        ? [`Remboursé en espèces`]
+        : remaining > 0
+          ? [`Crédit disponible sur le compte : ${m(remaining)}`]
+          : []),
+    ];
+
+    if (format === 'TICKET') {
+      return renderPdf({
+        pageSize: { width: TICKET_WIDTH, height: 'auto' },
+        pageMargins: [10, 10, 10, 14],
+        defaultStyle: { font: 'Roboto', fontSize: 8 },
+        info: { title: `${title} ${number}`, author: s['establishment.name'] },
+        content: [
+          { text: s['establishment.name'], bold: true, alignment: 'center', fontSize: 10 },
+          {
+            text: duplicate ? `*** DUPLICATA ***` : '',
+            alignment: 'center',
+            bold: true,
+            fontSize: 9,
+          },
+          { text: `${title} ${number}`, bold: true, fontSize: 9, margin: [0, 4, 0, 0] },
+          { text: `${formatDateTime(ret.createdAt, tz)} · ${userCode}`, fontSize: 7 },
+          { text: `Client : ${ret.client.name}`, fontSize: 7 },
+          ...(ret.sale
+            ? [
+                {
+                  text: `Facture d’origine : ${ret.sale.number}`,
+                  fontSize: 7,
+                  margin: [0, 0, 0, 4],
+                },
+              ]
+            : []),
+          {
+            table: {
+              widths: ['*', 'auto'],
+              body: lineRows.map((r) => [
+                {
+                  stack: [
+                    { text: r.name, fontSize: 7.5 },
+                    { text: `${r.qty} · lot ${r.lot} · ${r.state}`, fontSize: 6.5, color: '#444' },
+                  ],
+                },
+                { text: m(r.amount, false), fontSize: 7.5, alignment: 'right' },
+              ]),
+            },
+            layout: 'noBorders',
+          },
+          {
+            canvas: [
+              {
+                type: 'line',
+                x1: 0,
+                y1: 2,
+                x2: TICKET_WIDTH - 20,
+                y2: 2,
+                lineWidth: 0.5,
+                dash: { length: 2 },
+              },
+            ],
+          },
+          {
+            columns: [
+              { text: `TOTAL ${note ? 'AVOIR' : 'REMBOURSÉ'}`, bold: true, fontSize: 10 },
+              { text: m(ret.totalTtc), bold: true, fontSize: 10, alignment: 'right' },
+            ],
+            margin: [0, 2, 0, 2],
+          },
+          ...summary.map((t) => ({ text: t, fontSize: 7 })),
+          { text: `Motif : ${ret.reason}`, fontSize: 6.5, color: '#444', margin: [0, 4, 0, 0] },
+        ],
+      });
+    }
+
+    return renderPdf({
+      pageSize: 'A4',
+      pageMargins: [36, 36, 36, 48],
+      defaultStyle: { font: 'Roboto', fontSize: 9 },
+      info: { title: `${title} ${number}`, author: s['establishment.name'] },
+      watermark: this.watermark(false, duplicate),
+      footer: this.footer(s),
+      content: [
+        ...this.headerA4(e, title, number, [
+          `Date : ${formatDateTime(ret.createdAt, tz)}`,
+          `Utilisateur : ${userCode}`,
+          ...(ret.sale ? [`Facture d’origine : ${ret.sale.number}`] : []),
+          ...(duplicate ? ['DUPLICATA'] : []),
+        ]),
+        {
+          table: {
+            widths: ['*'],
+            body: [
+              [
+                {
+                  stack: [
+                    { text: 'Client', fontSize: 7, color: '#666' },
+                    { text: ret.client.name, bold: true },
+                    ...[
+                      ret.client.address,
+                      ret.client.phone && `Tél. ${ret.client.phone}`,
+                      `Code client : ${ret.client.code}`,
+                    ]
+                      .filter(Boolean)
+                      .map((t) => ({ text: t, fontSize: 8 })),
+                  ],
+                  margin: [4, 4, 4, 4],
+                },
+              ],
+            ],
+          },
+          layout: { hLineColor: () => '#ddd', vLineColor: () => '#ddd' },
+          margin: [0, 0, 0, 12],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', 70, 50, 80, 70],
+            body: [
+              ['Désignation', 'Lot', 'Qté', 'État', 'Montant TTC'].map((h, i) => ({
+                text: h,
+                bold: true,
+                fontSize: 8,
+                fillColor: '#e6f2f1',
+                alignment: i >= 2 && i !== 3 ? 'right' : 'left',
+              })),
+              ...lineRows.map((r) => [
+                { text: r.name },
+                { text: r.lot },
+                { text: r.qty, alignment: 'right' },
+                { text: r.state },
+                { text: m(r.amount, false), alignment: 'right' },
+              ]),
+            ],
+          },
+          layout: {
+            hLineColor: () => '#e5e7eb',
+            vLineWidth: () => 0,
+            paddingTop: () => 3,
+            paddingBottom: () => 3,
+          },
+        },
+        {
+          columns: [
+            {
+              width: '*',
+              stack: [
+                { text: `Motif du retour : ${ret.reason}`, fontSize: 8, margin: [0, 10, 0, 4] },
+                {
+                  text: `Arrêté le présent ${note ? 'avoir' : 'bon'} à la somme de : ${amountInWords(num(ret.totalTtc), s['general.currency_name'])}.`,
+                  fontSize: 8,
+                  italics: true,
+                },
+              ],
+            },
+            {
+              width: 220,
+              table: {
+                widths: ['*', 'auto'],
+                body: [
+                  [
+                    {
+                      text: `Total ${note ? 'de l’avoir' : 'remboursé'}`,
+                      bold: true,
+                      fontSize: 11,
+                    },
+                    { text: m(ret.totalTtc), bold: true, fontSize: 11, alignment: 'right' },
+                  ],
+                  ...summary.map((t) => [{ text: t, fontSize: 8, colSpan: 2 }, {}]),
+                ],
+              },
+              layout: 'lightHorizontalLines',
+              margin: [0, 10, 0, 0],
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  /** Impression / réimpression de l'avoir : DUPLICATA dès la 2e impression, tracé. */
+  async printReturn(returnId: string, format: DocumentFormat, actor: Actor): Promise<Buffer> {
+    const ret = await this.prisma.customerReturn.findUnique({
+      where: { id: returnId },
+      include: { creditNote: { select: { id: true, number: true, printCount: true } } },
+    });
+    if (!ret) throw new AppError('NOT_FOUND');
+    const count = ret.creditNote?.printCount ?? 0;
+    const duplicate = count > 0;
+    if (duplicate && !actor.permissions.has('sales.reprint'))
+      throw new AppError('FORBIDDEN', { permissions: ['sales.reprint'] });
+    const pdf = await this.returnPdf(returnId, format, duplicate);
+    await this.prisma.tx(async (tx) => {
+      if (ret.creditNote)
+        await tx.creditNote.update({
+          where: { id: ret.creditNote.id },
+          data: { printCount: { increment: 1 } },
+        });
+      if (duplicate) {
+        await this.audit.record(tx, {
+          eventType: 'DOCUMENT_REPRINTED',
+          actor,
+          entityType: 'return',
+          entityId: returnId,
+          entityRef: ret.creditNote?.number ?? ret.number,
+          summary: `Réimpression de l’avoir ${ret.creditNote?.number ?? ret.number} (${format === 'TICKET' ? 'ticket' : 'A4'})`,
+        });
+      }
+    });
+    return pdf;
+  }
+
+  /** Reçu de règlement `REG-` : montant, mode, factures réglées, acompte. */
+  async receiptPdf(paymentId: string, format: DocumentFormat, duplicate: boolean): Promise<Buffer> {
+    const p = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        client: true,
+        allocations: {
+          where: { cancelledAt: null },
+          include: { sale: { select: { number: true } } },
+        },
+      },
+    });
+    if (!p) throw new AppError('NOT_FOUND');
+    const user = await this.prisma.user.findUnique({
+      where: { id: p.createdById },
+      select: { code: true },
+    });
+    const e = await this.establishment();
+    const s = e.settings;
+    const tz = s['general.timezone'];
+    const m = (v: number | bigint | null | undefined, c = true) => this.money(v, s, c);
+    const allocated = p.allocations.reduce((a, x) => a + num(x.amount), 0);
+    const unallocated = num(p.amount) - num(p.refundedAmount) - allocated;
+    const cancelled = p.status !== 'VALID';
+    const mode = [
+      PAYMENT_METHODS[p.method],
+      p.chequeNumber && `n° ${p.chequeNumber}`,
+      p.bank,
+      p.reference && `réf. ${p.reference}`,
+      p.dueDate && `échéance ${formatIsoDate(p.dueDate.toISOString().slice(0, 10))}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const rows: [string, string][] = [
+      ['Client', p.client.name],
+      ['Mode de règlement', mode],
+      ...p.allocations.map((a) => [`Facture ${a.sale.number}`, m(a.amount)] as [string, string]),
+      ...(unallocated > 0
+        ? ([['Acompte (crédit sur le compte)', m(unallocated)]] as [string, string][])
+        : []),
+    ];
+    const title = 'REÇU DE RÈGLEMENT';
+    if (format === 'TICKET') {
+      return renderPdf({
+        pageSize: { width: TICKET_WIDTH, height: 'auto' },
+        pageMargins: [10, 10, 10, 14],
+        defaultStyle: { font: 'Roboto', fontSize: 8 },
+        info: { title: `${title} ${p.number}`, author: s['establishment.name'] },
+        content: [
+          { text: s['establishment.name'], bold: true, alignment: 'center', fontSize: 10 },
+          {
+            text: cancelled ? '*** ANNULÉ ***' : duplicate ? '*** DUPLICATA ***' : '',
+            alignment: 'center',
+            bold: true,
+            fontSize: 9,
+          },
+          { text: `${title} ${p.number}`, bold: true, fontSize: 9, margin: [0, 4, 0, 0] },
+          {
+            text: `${formatDateTime(p.paidAt, tz)} · ${user?.code ?? ''}`,
+            fontSize: 7,
+            margin: [0, 0, 0, 4],
+          },
+          {
+            table: {
+              widths: ['*', 'auto'],
+              body: rows.map(([a, b]) => [
+                { text: a, fontSize: 7.5 },
+                { text: b, fontSize: 7.5, alignment: 'right' },
+              ]),
+            },
+            layout: 'noBorders',
+          },
+          {
+            columns: [
+              { text: 'MONTANT REÇU', bold: true, fontSize: 10 },
+              { text: m(p.amount), bold: true, fontSize: 10, alignment: 'right' },
+            ],
+            margin: [0, 4, 0, 2],
+          },
+          { text: `Solde du compte : ${m(p.client.balance)}`, fontSize: 7 },
+        ],
+      });
+    }
+    return renderPdf({
+      pageSize: 'A4',
+      pageMargins: [36, 36, 36, 48],
+      defaultStyle: { font: 'Roboto', fontSize: 9 },
+      info: { title: `${title} ${p.number}`, author: s['establishment.name'] },
+      watermark: this.watermark(cancelled, duplicate),
+      footer: this.footer(s),
+      content: [
+        ...this.headerA4(e, cancelled ? 'REÇU ANNULÉ' : title, p.number, [
+          `Date : ${formatDateTime(p.paidAt, tz)}`,
+          `Utilisateur : ${user?.code ?? ''}`,
+          ...(duplicate ? ['DUPLICATA'] : []),
+        ]),
+        {
+          table: {
+            widths: [180, '*'],
+            body: rows.map(([a, b]) => [
+              { text: a, color: '#555' },
+              { text: b, bold: a.startsWith('Facture') === false && a === 'Client' },
+            ]),
+          },
+          layout: 'lightHorizontalLines',
+          margin: [0, 0, 0, 12],
+        },
+        {
+          columns: [
+            {
+              text: `Arrêté le présent reçu à la somme de : ${amountInWords(num(p.amount), s['general.currency_name'])}.`,
+              italics: true,
+              fontSize: 8,
+              width: '*',
+            },
+            {
+              text: `Montant reçu : ${m(p.amount)}`,
+              bold: true,
+              fontSize: 13,
+              alignment: 'right',
+              width: 220,
+            },
+          ],
+        },
+        {
+          text: `Solde du compte après ce règlement : ${m(p.client.balance)}${num(p.client.balance) < 0 ? ' (crédit en votre faveur)' : ''}`,
+          margin: [0, 12, 0, 0],
+          fontSize: 9,
+        },
+        ...(cancelled && p.cancelReason
+          ? [
+              {
+                text: `Règlement annulé le ${formatDateTime(p.cancelledAt, tz)} — motif : ${p.cancelReason}`,
+                color: '#b91c1c',
+                margin: [0, 10, 0, 0],
+              },
+            ]
+          : []),
+      ],
+    });
+  }
+
+  async printReceipt(paymentId: string, format: DocumentFormat, actor: Actor): Promise<Buffer> {
+    const p = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { number: true, printCount: true },
+    });
+    if (!p) throw new AppError('NOT_FOUND');
+    const duplicate = p.printCount > 0;
+    if (duplicate && !actor.permissions.has('sales.reprint'))
+      throw new AppError('FORBIDDEN', { permissions: ['sales.reprint'] });
+    const pdf = await this.receiptPdf(paymentId, format, duplicate);
+    await this.prisma.tx(async (tx) => {
+      await tx.payment.update({ where: { id: paymentId }, data: { printCount: { increment: 1 } } });
+      if (duplicate) {
+        await this.audit.record(tx, {
+          eventType: 'DOCUMENT_REPRINTED',
+          actor,
+          entityType: 'payment',
+          entityId: paymentId,
+          entityRef: p.number,
+          summary: `Réimpression du reçu de règlement ${p.number} (${format === 'TICKET' ? 'ticket' : 'A4'})`,
+        });
+      }
+    });
+    return pdf;
+  }
+
+  /** Relevé de compte (A4) : solde d'ouverture, mouvements, solde de clôture, factures ouvertes. */
+  async statementPdf(clientId: string, from: string, to: string): Promise<Buffer> {
+    const st = await this.ledger.statement(clientId, from, to);
+    const e = await this.establishment();
+    const s = e.settings;
+    const tz = s['general.timezone'];
+    const m = (v: number | bigint | null | undefined, c = true) => this.money(v, s, c);
+    const open = await this.prisma.sale.findMany({
+      where: { clientId, status: 'VALIDATED', amountDue: { gt: 0 } },
+      orderBy: [{ validatedAt: 'asc' }],
+      select: { number: true, validatedAt: true, dueDate: true, totalTtc: true, amountDue: true },
+    });
+    const right = (t: string, extra: Record<string, unknown> = {}) => ({
+      text: t,
+      alignment: 'right',
+      ...extra,
+    });
+    return renderPdf({
+      pageSize: 'A4',
+      pageMargins: [36, 36, 36, 48],
+      defaultStyle: { font: 'Roboto', fontSize: 8.5 },
+      info: { title: `Relevé de compte ${st.client.code}`, author: s['establishment.name'] },
+      footer: this.footer(s),
+      content: [
+        ...this.headerA4(e, 'RELEVÉ DE COMPTE', st.client.code, [
+          `Période : du ${formatIsoDate(from)} au ${formatIsoDate(to)}`,
+          `Édité le ${formatDateTime(now(), tz)}`,
+        ]),
+        {
+          table: {
+            widths: ['*'],
+            body: [
+              [
+                {
+                  stack: [
+                    { text: 'Client', fontSize: 7, color: '#666' },
+                    { text: st.client.name, bold: true, fontSize: 10 },
+                    ...[
+                      st.client.address,
+                      st.client.phone && `Tél. ${st.client.phone}`,
+                      st.client.nationalIdOrTaxId && `CIN / MF ${st.client.nationalIdOrTaxId}`,
+                    ]
+                      .filter(Boolean)
+                      .map((t) => ({ text: t, fontSize: 8 })),
+                  ],
+                  margin: [4, 4, 4, 4],
+                },
+              ],
+            ],
+          },
+          layout: { hLineColor: () => '#ddd', vLineColor: () => '#ddd' },
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: [52, 70, '*', 58, 58, 64],
+            body: [
+              ['Date', 'Pièce', 'Libellé', 'Débit', 'Crédit', 'Solde'].map((h, i) => ({
+                text: h,
+                bold: true,
+                fillColor: '#e6f2f1',
+                alignment: i >= 3 ? 'right' : 'left',
+              })),
+              [
+                { text: '' },
+                { text: '' },
+                { text: 'Solde d’ouverture', italics: true },
+                right(''),
+                right(''),
+                right(m(st.opening, false), { bold: true }),
+              ],
+              ...st.rows.map((r) => [
+                { text: formatDate(r.date, tz) },
+                { text: r.documentNumber ?? '' },
+                { text: r.description ?? CLIENT_LEDGER_ENTRY_TYPES[r.entryType] },
+                right(r.debit ? m(r.debit, false) : ''),
+                right(r.credit ? m(r.credit, false) : ''),
+                right(m(r.balance, false)),
+              ]),
+              [
+                { text: '' },
+                { text: '' },
+                { text: 'Totaux de la période', bold: true },
+                right(m(st.totalDebit, false), { bold: true }),
+                right(m(st.totalCredit, false), { bold: true }),
+                right(''),
+              ],
+              [
+                { text: '' },
+                { text: '' },
+                { text: 'Solde de clôture', bold: true },
+                right(''),
+                right(''),
+                right(m(st.closing, false), { bold: true, fontSize: 10 }),
+              ],
+            ],
+          },
+          layout: {
+            hLineColor: () => '#e5e7eb',
+            vLineWidth: () => 0,
+            paddingTop: () => 2,
+            paddingBottom: () => 2,
+          },
+        },
+        {
+          text:
+            st.closing > 0
+              ? `Solde à payer : ${m(st.closing)}`
+              : st.closing < 0
+                ? `Crédit en votre faveur : ${m(-st.closing)}`
+                : 'Compte soldé',
+          bold: true,
+          fontSize: 11,
+          margin: [0, 10, 0, 6],
+          color: st.closing > 0 ? '#b91c1c' : '#111',
+        },
+        ...(open.length > 0
+          ? [
+              { text: 'Factures restant dues', bold: true, margin: [0, 6, 0, 3] },
+              {
+                table: {
+                  headerRows: 1,
+                  widths: ['*', 60, 60, 70, 70],
+                  body: [
+                    ['Facture', 'Date', 'Échéance', 'Total', 'Reste dû'].map((h, i) => ({
+                      text: h,
+                      bold: true,
+                      fillColor: '#f3f4f6',
+                      alignment: i >= 3 ? 'right' : 'left',
+                    })),
+                    ...open.map((o) => [
+                      { text: o.number ?? '' },
+                      { text: formatDate(o.validatedAt, tz) },
+                      {
+                        text: o.dueDate ? formatIsoDate(o.dueDate.toISOString().slice(0, 10)) : '',
+                      },
+                      right(m(o.totalTtc, false)),
+                      right(m(o.amountDue, false)),
+                    ]),
+                  ],
+                },
+                layout: 'lightHorizontalLines',
+              },
+            ]
+          : []),
+      ],
+    });
+  }
+
+  // =========================================================================
   // Pièces jointes d'e-mails
   // =========================================================================
 
   async pdfFor(
     entityType: string,
     entityId: string,
+    params?: Record<string, unknown>,
   ): Promise<{ filename: string; content: Buffer }> {
     if (entityType === 'sale') {
       const sale = await this.prisma.sale.findUnique({
@@ -781,11 +1380,48 @@ export class DocumentsService {
         content: await this.salePdf(entityId, 'A4', false),
       };
     }
+    if (entityType === 'credit_note') {
+      const note = await this.prisma.creditNote.findUnique({
+        where: { id: entityId },
+        select: { number: true, returnId: true },
+      });
+      if (!note?.returnId) throw new AppError('NOT_FOUND');
+      return {
+        filename: `${note.number}.pdf`,
+        content: await this.returnPdf(note.returnId, 'A4', false),
+      };
+    }
+    if (entityType === 'payment') {
+      const payment = await this.prisma.payment.findUnique({
+        where: { id: entityId },
+        select: { number: true },
+      });
+      return {
+        filename: `${payment?.number ?? 'recu'}.pdf`,
+        content: await this.receiptPdf(entityId, 'A4', false),
+      };
+    }
+    if (entityType === 'statement') {
+      const from = String(params?.from ?? '');
+      const to = String(params?.to ?? '');
+      const client = await this.prisma.client.findUnique({
+        where: { id: entityId },
+        select: { code: true },
+      });
+      return {
+        filename: `Releve-${client?.code ?? 'client'}-${from}-${to}.pdf`,
+        content: await this.statementPdf(entityId, from, to),
+      };
+    }
     throw new AppError('NOT_FOUND', { entity: entityType });
   }
 
   /** Variables d'e-mail d'un document (aucun nom de médicament — confidentialité §6.19 C). */
-  async emailVariables(entityType: string, entityId: string): Promise<Record<string, unknown>> {
+  async emailVariables(
+    entityType: string,
+    entityId: string,
+    params?: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const s = await this.settings.all();
     const tz = s['general.timezone'];
     if (entityType === 'sale') {
@@ -801,6 +1437,52 @@ export class DocumentsService {
           date: formatDate(sale.validatedAt, tz),
           montant: this.money(sale.totalTtc, s),
           reste_a_payer: this.money(sale.status === 'CANCELLED' ? 0 : sale.amountDue, s),
+        },
+      };
+    }
+    if (entityType === 'credit_note') {
+      const note = await this.prisma.creditNote.findUnique({
+        where: { id: entityId },
+        include: { client: true },
+      });
+      if (!note) throw new AppError('NOT_FOUND');
+      return {
+        client: { nom: note.client.name },
+        document: {
+          numero: note.number,
+          date: formatDate(note.createdAt, tz),
+          montant: this.money(note.amount, s),
+          reste_a_payer: this.money(note.remainingAmount, s),
+        },
+      };
+    }
+    if (entityType === 'payment') {
+      const p = await this.prisma.payment.findUnique({
+        where: { id: entityId },
+        include: { client: true },
+      });
+      if (!p) throw new AppError('NOT_FOUND');
+      return {
+        client: { nom: p.client.name },
+        document: {
+          numero: p.number,
+          date: formatDate(p.paidAt, tz),
+          montant: this.money(p.amount, s),
+          reste_a_payer: this.money(Math.max(0, num(p.client.balance)), s),
+        },
+      };
+    }
+    if (entityType === 'statement') {
+      const from = String(params?.from ?? '');
+      const to = String(params?.to ?? '');
+      const st = await this.ledger.statement(entityId, from, to);
+      return {
+        client: { nom: st.client.name },
+        document: {
+          numero: `du ${formatIsoDate(from)} au ${formatIsoDate(to)}`,
+          date: formatIsoDate(to),
+          montant: this.money(st.closing, s),
+          reste_a_payer: this.money(Math.max(0, st.closing), s),
         },
       };
     }
