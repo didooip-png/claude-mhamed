@@ -11,6 +11,9 @@ on:
         default: ''
   push:
     tags: ['desktop-v*']
+    # Se relance aussi quand ce workflow lui-même change : la construction Windows reste vérifiée.
+    branches: ['claude/**', 'main']
+    paths: ['.github/workflows/desktop.yml']
 
 jobs:
   windows:
