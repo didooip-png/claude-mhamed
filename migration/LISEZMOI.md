@@ -11,14 +11,14 @@ l'installation à votre place sur le serveur.
 
 ## Ce que contient le dossier
 
-| Élément                                       | À quoi il sert                                                                                                                             |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `LISEZMOI.md`                                 | Ce document : ce que **vous** avez à faire.                                                                                                |
-| `CONTEXTE_CLAUDE_CODE.md`                     | Le guide complet pour **Claude Code** : ce qui a été construit, comment déployer, comment vérifier, ce qui reste à valider.                |
-| `PROMPT_CLAUDE_CODE.txt`                      | Le message à coller dans Claude Code au démarrage (à compléter avec votre nom de domaine).                                                 |
-| `code/`                                       | Le logiciel complet (site, serveur, application Windows, documentation, manuels PDF).                                                      |
-| `PharmaStock.git.bundle`                      | Tout l'historique du projet (chaque étape, chaque décision). Sert à recréer un dépôt Git : `git clone PharmaStock.git.bundle pharmastock`. |
-| `VERSION.txt`, `HISTORIQUE.txt`, `SHA256SUMS` | Version exacte, liste des étapes (commits) et empreintes des fichiers (pour vérifier que rien n'a été altéré pendant le transfert).        |
+| Élément                                       | À quoi il sert                                                                                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LISEZMOI.md`                                 | Ce document : ce que **vous** avez à faire.                                                                                                     |
+| `CONTEXTE_CLAUDE_CODE.md`                     | Le guide complet pour **Claude Code** : ce qui a été construit, comment déployer, comment vérifier, ce qui reste à valider.                     |
+| `PROMPT_CLAUDE_CODE.txt`                      | Le message à coller dans Claude Code au démarrage (à compléter avec votre nom de domaine).                                                      |
+| `code/`                                       | Le logiciel complet (site, serveur, application Windows, documentation, manuels PDF).                                                           |
+| `PharmaStock-historique-….git.bundle`         | (fourni à part, facultatif) Tout l'historique du projet : `git clone PharmaStock-historique-….git.bundle pharmastock`. Il est aussi sur GitHub. |
+| `VERSION.txt`, `HISTORIQUE.txt`, `SHA256SUMS` | Version exacte, liste des étapes (commits) et empreintes des fichiers (pour vérifier que rien n'a été altéré pendant le transfert).             |
 
 Les **manuels PDF** (Administrateur, Préparateur), l'**aide-mémoire d'une page** à imprimer pour les préparateurs et la
 **FAQ « Que faire si… »** sont dans `code/docs/manuels/`.
