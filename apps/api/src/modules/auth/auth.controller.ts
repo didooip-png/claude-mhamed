@@ -14,7 +14,12 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { AppError } from '../../common/app-error.js';
-import { AllowPasswordChange, CurrentActor, Public, RequirePermission } from '../../common/decorators.js';
+import {
+  AllowPasswordChange,
+  CurrentActor,
+  Public,
+  RequirePermission,
+} from '../../common/decorators.js';
 import { RequestContext, type Actor, type DeviceInfo } from '../../common/request-context.js';
 import { IdParam, ZBody } from '../../common/zod.js';
 import { loadConfig } from '../../config.js';
@@ -50,9 +55,18 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(200)
-  async login(@ZBody(loginSchema) body: LoginInput, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @ZBody(loginSchema) body: LoginInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const ctx = RequestContext.get();
-    const result = await this.auth.login(body, device(), ctx?.ip ?? null, req.header('user-agent') ?? null);
+    const result = await this.auth.login(
+      body,
+      device(),
+      ctx?.ip ?? null,
+      req.header('user-agent') ?? null,
+    );
     return this.respond(res, result);
   }
 
@@ -69,9 +83,20 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('unlock')
   @HttpCode(200)
-  async unlock(@ZBody(unlockSchema) body: { pin: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async unlock(
+    @ZBody(unlockSchema) body: { pin: string; userCode?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
-    const result = await this.auth.unlock(token, body.pin, device(), RequestContext.get()?.ip ?? null);
+    const result = await this.auth.unlock(
+      token,
+      body.pin,
+      device(),
+      RequestContext.get()?.ip ?? null,
+      body.userCode,
+      req.header('user-agent') ?? null,
+    );
     return this.respond(res, result);
   }
 
@@ -98,7 +123,10 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.respond(res, await this.auth.switchUser(actor, body, device(), req.header('user-agent') ?? null));
+    return this.respond(
+      res,
+      await this.auth.switchUser(actor, body, device(), req.header('user-agent') ?? null),
+    );
   }
 
   @Post('lock')
@@ -117,13 +145,19 @@ export class AuthController {
   @AllowPasswordChange()
   @Post('change-password')
   @HttpCode(200)
-  changePassword(@CurrentActor() actor: Actor, @ZBody(changePasswordSchema) body: ChangePasswordInput) {
+  changePassword(
+    @CurrentActor() actor: Actor,
+    @ZBody(changePasswordSchema) body: ChangePasswordInput,
+  ) {
     return this.auth.changePassword(actor, body);
   }
 
   @Post('change-pin')
   @HttpCode(204)
-  async changePin(@CurrentActor() actor: Actor, @ZBody(changePinSchema) body: { currentPassword: string; newPin: string }) {
+  async changePin(
+    @CurrentActor() actor: Actor,
+    @ZBody(changePinSchema) body: { currentPassword: string; newPin: string },
+  ) {
     await this.auth.changePin(actor, body.currentPassword, body.newPin);
   }
 
@@ -135,13 +169,19 @@ export class AuthController {
 
   @Post('totp/enable')
   @HttpCode(204)
-  async totpEnable(@CurrentActor() actor: Actor, @ZBody(z.object({ code: z.string().regex(/^\d{6}$/) })) body: { code: string }) {
+  async totpEnable(
+    @CurrentActor() actor: Actor,
+    @ZBody(z.object({ code: z.string().regex(/^\d{6}$/) })) body: { code: string },
+  ) {
     await this.auth.totpEnable(actor, body.code);
   }
 
   @Post('totp/disable')
   @HttpCode(204)
-  async totpDisable(@CurrentActor() actor: Actor, @ZBody(z.object({ currentPassword: z.string().min(1) })) body: { currentPassword: string }) {
+  async totpDisable(
+    @CurrentActor() actor: Actor,
+    @ZBody(z.object({ currentPassword: z.string().min(1) })) body: { currentPassword: string },
+  ) {
     await this.auth.totpDisable(actor, body.currentPassword);
   }
 

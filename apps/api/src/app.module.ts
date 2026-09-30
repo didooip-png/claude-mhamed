@@ -47,7 +47,10 @@ const config = loadConfig();
           return { userCode: ctx?.user?.code, deviceId: ctx?.device?.id };
         },
         autoLogging: { ignore: (req) => req.url === '/api/v1/health' },
-        transport: config.isProduction || config.NODE_ENV === 'test' ? undefined : { target: 'pino-pretty', options: { singleLine: true } },
+        transport:
+          config.isProduction || config.NODE_ENV === 'test'
+            ? undefined
+            : { target: 'pino-pretty', options: { singleLine: true } },
       },
     }),
     ThrottlerModule.forRoot({

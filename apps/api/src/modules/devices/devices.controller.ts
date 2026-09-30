@@ -1,7 +1,17 @@
 import { Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { registerDeviceSchema, renameDeviceSchema, type RegisterDeviceInput } from '@pharmastock/shared';
-import { AllowPendingDevice, CurrentActor, Public, RequirePermission, SkipDevice } from '../../common/decorators.js';
+import {
+  registerDeviceSchema,
+  renameDeviceSchema,
+  type RegisterDeviceInput,
+} from '@pharmastock/shared';
+import {
+  AllowPendingDevice,
+  CurrentActor,
+  Public,
+  RequirePermission,
+  SkipDevice,
+} from '../../common/decorators.js';
 import { RequestContext, type Actor } from '../../common/request-context.js';
 import { IdParam, ZBody } from '../../common/zod.js';
 import { DevicesService } from './devices.service.js';
@@ -52,7 +62,11 @@ export class DevicesController {
   @RequirePermission('admin.devices')
   @Post(':id/rename')
   @HttpCode(204)
-  async rename(@IdParam() id: string, @ZBody(renameDeviceSchema) body: { name: string }, @CurrentActor() actor: Actor) {
+  async rename(
+    @IdParam() id: string,
+    @ZBody(renameDeviceSchema) body: { name: string },
+    @CurrentActor() actor: Actor,
+  ) {
     await this.devices.rename(id, body.name, actor);
   }
 }

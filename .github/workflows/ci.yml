@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pharmastock
+          POSTGRES_PASSWORD: pharmastock
+          POSTGRES_DB: pharmastock_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pharmastock"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://pharmastock:pharmastock@localhost:5432/pharmastock_test?schema=public
+      DATABASE_URL: postgresql://pharmastock:pharmastock@localhost:5432/pharmastock_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build du paquet partagé et génération du client Prisma
+        run: |
+          pnpm --filter @pharmastock/shared build
+          pnpm --filter @pharmastock/api db:generate
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Tests unitaires et d'intégration
+        run: pnpm test
+      - name: Build
+        run: |
+          pnpm --filter @pharmastock/api build
+          pnpm --filter @pharmastock/web build

@@ -15,7 +15,8 @@ export class OverrideAuditInterceptor implements NestInterceptor {
   intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
       catchError((err: unknown) => {
-        if (!(err instanceof AppError) || err.code !== 'OVERRIDE_INVALID') return throwError(() => err);
+        if (!(err instanceof AppError) || err.code !== 'OVERRIDE_INVALID')
+          return throwError(() => err);
         const actor = currentActor();
         const details = err.details ?? {};
         return from(

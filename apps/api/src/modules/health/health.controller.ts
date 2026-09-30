@@ -15,8 +15,16 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
-      throw new HttpException({ status: 'error', database: 'unreachable' }, HttpStatus.SERVICE_UNAVAILABLE);
+      throw new HttpException(
+        { status: 'error', database: 'unreachable' },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
-    return { status: 'ok', database: 'ok', latencyMs: Date.now() - started, time: new Date().toISOString() };
+    return {
+      status: 'ok',
+      database: 'ok',
+      latencyMs: Date.now() - started,
+      time: new Date().toISOString(),
+    };
   }
 }

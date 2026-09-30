@@ -37,7 +37,9 @@ export class SettingsService {
     if (client === this.prisma && this.cache && Date.now() - this.cache.loadedAt < CACHE_TTL_MS) {
       return this.cache.values;
     }
-    const rows = await client.setting.findMany({ where: { key: { in: Object.keys(SETTINGS_DEFINITIONS) } } });
+    const rows = await client.setting.findMany({
+      where: { key: { in: Object.keys(SETTINGS_DEFINITIONS) } },
+    });
     const values = this.defaults();
     for (const row of rows) {
       if (!isSettingKey(row.key)) continue;
@@ -68,12 +70,16 @@ export class SettingsService {
       }
       const result = SETTINGS_DEFINITIONS[key].schema.safeParse(value);
       if (!result.success) {
-        errors[key] = Object.values(zodIssuesToDetails(result.error).fieldErrors as Record<string, string>)[0] ?? 'Valeur invalide';
+        errors[key] =
+          Object.values(
+            zodIssuesToDetails(result.error).fieldErrors as Record<string, string>,
+          )[0] ?? 'Valeur invalide';
         continue;
       }
       parsed.push([key, result.data]);
     }
-    if (Object.keys(errors).length > 0) throw new AppError('VALIDATION_ERROR', { fieldErrors: errors });
+    if (Object.keys(errors).length > 0)
+      throw new AppError('VALIDATION_ERROR', { fieldErrors: errors });
 
     await this.prisma.tx(async (tx) => {
       const current = await this.all(tx);
@@ -83,7 +89,11 @@ export class SettingsService {
         await tx.setting.upsert({
           where: { key },
           create: { key, value: value as Prisma.InputJsonValue, updatedById: actor.userId },
-          update: { value: value as Prisma.InputJsonValue, updatedById: actor.userId, version: { increment: 1 } },
+          update: {
+            value: value as Prisma.InputJsonValue,
+            updatedById: actor.userId,
+            version: { increment: 1 },
+          },
         });
         await this.audit.record(tx, {
           eventType: 'SETTING_CHANGED',
@@ -111,7 +121,11 @@ export class SettingsService {
     await tx.setting.upsert({
       where: { key },
       create: { key, value: value as Prisma.InputJsonValue, updatedById: actorId },
-      update: { value: value as Prisma.InputJsonValue, updatedById: actorId, version: { increment: 1 } },
+      update: {
+        value: value as Prisma.InputJsonValue,
+        updatedById: actorId,
+        version: { increment: 1 },
+      },
     });
   }
 }

@@ -1,5 +1,10 @@
 import { Controller, Get, Put } from '@nestjs/common';
-import { PUBLIC_SETTING_KEYS, SETTINGS_DEFINITIONS, SETTINGS_GROUPS, updateSettingsSchema } from '@pharmastock/shared';
+import {
+  PUBLIC_SETTING_KEYS,
+  SETTINGS_DEFINITIONS,
+  SETTINGS_GROUPS,
+  updateSettingsSchema,
+} from '@pharmastock/shared';
 import { z } from 'zod';
 import { CurrentActor, RequirePermission } from '../../common/decorators.js';
 import type { Actor } from '../../common/request-context.js';
@@ -26,7 +31,12 @@ export class SettingsController {
       definitions: Object.fromEntries(
         Object.entries(SETTINGS_DEFINITIONS).map(([key, def]) => [
           key,
-          { group: def.group, label: def.label, help: def.help ?? null, schema: z.toJSONSchema(def.schema, { unrepresentable: 'any' }) },
+          {
+            group: def.group,
+            label: def.label,
+            help: def.help ?? null,
+            schema: z.toJSONSchema(def.schema, { unrepresentable: 'any' }),
+          },
         ]),
       ),
       values,
@@ -35,7 +45,10 @@ export class SettingsController {
 
   @RequirePermission('admin.settings')
   @Put()
-  update(@ZBody(updateSettingsSchema) body: { values: Record<string, unknown> }, @CurrentActor() actor: Actor) {
+  update(
+    @ZBody(updateSettingsSchema) body: { values: Record<string, unknown> },
+    @CurrentActor() actor: Actor,
+  ) {
     return this.settings.update(body.values, actor);
   }
 }

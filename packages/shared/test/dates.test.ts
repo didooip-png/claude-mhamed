@@ -22,7 +22,9 @@ describe('dates', () => {
     expect(todayIso('Africa/Tunis', new Date('2026-09-30T23:30:00Z'))).toBe('2026-10-01');
   });
   it('convertit une heure locale en UTC', () => {
-    expect(zonedDateTimeToUtc('2026-09-30', '00:00:00').toISOString()).toBe('2026-09-29T23:00:00.000Z');
+    expect(zonedDateTimeToUtc('2026-09-30', '00:00:00').toISOString()).toBe(
+      '2026-09-29T23:00:00.000Z',
+    );
   });
   it('calcule les écarts de dates et le niveau de péremption', () => {
     expect(diffDaysIso('2026-09-30', '2026-10-30')).toBe(30);

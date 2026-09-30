@@ -1,5 +1,12 @@
 import { Controller, Get, Post } from '@nestjs/common';
-import { AUDIT_EVENTS, AUDIT_EVENT_TYPES, paginationSchema, startOfLocalDay, endOfLocalDayExclusive, isoDateSchema } from '@pharmastock/shared';
+import {
+  AUDIT_EVENTS,
+  AUDIT_EVENT_TYPES,
+  paginationSchema,
+  startOfLocalDay,
+  endOfLocalDayExclusive,
+  isoDateSchema,
+} from '@pharmastock/shared';
 import { z } from 'zod';
 import { CurrentActor, RequirePermission } from '../../common/decorators.js';
 import { pageArgs, paginated } from '../../common/pagination.js';

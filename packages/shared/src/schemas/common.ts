@@ -5,9 +5,14 @@ export const idSchema = z.uuid({ error: 'Identifiant invalide' });
 
 /** Montant en millimes (entier). */
 export const millimesSchema = z.number().int({ error: 'Montant invalide' }).safe();
-export const positiveMillimesSchema = millimesSchema.min(0, { error: 'Le montant doit être positif' });
+export const positiveMillimesSchema = millimesSchema.min(0, {
+  error: 'Le montant doit être positif',
+});
 export const bpSchema = z.number().int().min(0).max(10000);
-export const qtySchema = z.number().int({ error: 'Quantité entière attendue' }).positive({ error: 'Quantité invalide' });
+export const qtySchema = z
+  .number()
+  .int({ error: 'Quantité entière attendue' })
+  .positive({ error: 'Quantité invalide' });
 
 export const isoDateSchema = z
   .string()

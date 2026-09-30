@@ -6,7 +6,11 @@ export default defineConfig({
     swc.vite({
       jsc: {
         parser: { syntax: 'typescript', decorators: true },
-        transform: { legacyDecorator: true, decoratorMetadata: true, useDefineForClassFields: false },
+        transform: {
+          legacyDecorator: true,
+          decoratorMetadata: true,
+          useDefineForClassFields: false,
+        },
         target: 'es2023',
         keepClassNames: true,
       },

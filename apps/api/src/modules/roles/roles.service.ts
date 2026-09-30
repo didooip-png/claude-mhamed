@@ -37,7 +37,12 @@ export class RolesService implements OnModuleInit {
     }
     await this.prisma.role.upsert({
       where: { systemKey: 'ADMIN' },
-      create: { name: SYSTEM_ROLES.ADMIN, systemKey: 'ADMIN', isSystem: true, description: 'Accès illimité' },
+      create: {
+        name: SYSTEM_ROLES.ADMIN,
+        systemKey: 'ADMIN',
+        isSystem: true,
+        description: 'Accès illimité',
+      },
       update: {},
     });
     const preparer = await this.prisma.role.findUnique({ where: { systemKey: 'PREPARER' } });
@@ -47,8 +52,11 @@ export class RolesService implements OnModuleInit {
           name: SYSTEM_ROLES.PREPARER,
           systemKey: 'PREPARER',
           isSystem: true,
-          description: 'Utilisation quotidienne, sans modification ni suppression d’opérations validées',
-          permissions: { create: PREPARER_DEFAULT_PERMISSIONS.map((permissionKey) => ({ permissionKey })) },
+          description:
+            'Utilisation quotidienne, sans modification ni suppression d’opérations validées',
+          permissions: {
+            create: PREPARER_DEFAULT_PERMISSIONS.map((permissionKey) => ({ permissionKey })),
+          },
         },
       });
     }
@@ -80,7 +88,8 @@ export class RolesService implements OnModuleInit {
       systemKey: r.systemKey,
       userCount: r._count.users,
       version: r.version,
-      permissions: r.systemKey === 'ADMIN' ? [...ALL_PERMISSIONS] : r.permissions.map((p) => p.permissionKey),
+      permissions:
+        r.systemKey === 'ADMIN' ? [...ALL_PERMISSIONS] : r.permissions.map((p) => p.permissionKey),
     }));
   }
 
@@ -110,15 +119,26 @@ export class RolesService implements OnModuleInit {
     const result = await this.prisma.tx(async (tx) => {
       const role = await tx.role.findUnique({ where: { id }, include: { permissions: true } });
       if (!role) throw new AppError('NOT_FOUND');
-      if (role.systemKey === 'ADMIN') throw new AppError('SYSTEM_ROLE_PROTECTED', undefined, { status: 400, message: 'Le rôle Administrateur dispose toujours de toutes les permissions.' });
-      if (role.isSystem && input.name !== role.name) throw new AppError('SYSTEM_ROLE_PROTECTED', undefined, { status: 400 });
+      if (role.systemKey === 'ADMIN')
+        throw new AppError('SYSTEM_ROLE_PROTECTED', undefined, {
+          status: 400,
+          message: 'Le rôle Administrateur dispose toujours de toutes les permissions.',
+        });
+      if (role.isSystem && input.name !== role.name)
+        throw new AppError('SYSTEM_ROLE_PROTECTED', undefined, { status: 400 });
       const before = role.permissions.map((p) => p.permissionKey).sort();
       const after = [...new Set<Permission>(input.permissions)].sort();
       await tx.rolePermission.deleteMany({ where: { roleId: id } });
-      await tx.rolePermission.createMany({ data: after.map((permissionKey) => ({ roleId: id, permissionKey })) });
+      await tx.rolePermission.createMany({
+        data: after.map((permissionKey) => ({ roleId: id, permissionKey })),
+      });
       const updated = await tx.role.update({
         where: { id },
-        data: { name: input.name, description: input.description ?? null, version: { increment: 1 } },
+        data: {
+          name: input.name,
+          description: input.description ?? null,
+          version: { increment: 1 },
+        },
       });
       await this.audit.record(tx, {
         eventType: 'ROLE_PERMISSIONS_CHANGED',
@@ -142,7 +162,10 @@ export class RolesService implements OnModuleInit {
 
   async remove(id: string, actor: Actor) {
     await this.prisma.tx(async (tx) => {
-      const role = await tx.role.findUnique({ where: { id }, include: { _count: { select: { users: true } } } });
+      const role = await tx.role.findUnique({
+        where: { id },
+        include: { _count: { select: { users: true } } },
+      });
       if (!role) throw new AppError('NOT_FOUND');
       if (role.isSystem) throw new AppError('SYSTEM_ROLE_PROTECTED', undefined, { status: 400 });
       if (role._count.users > 0) throw new AppError('ROLE_IN_USE', undefined, { status: 400 });

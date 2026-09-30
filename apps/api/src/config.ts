@@ -9,7 +9,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(32, { error: 'JWT_ACCESS_SECRET : 32 caractères minimum' }),
   /** Clé AES-256-GCM (64 caractères hexadécimaux) pour les secrets en base (mot de passe SMTP, TOTP). */
-  APP_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, { error: 'APP_ENCRYPTION_KEY : 64 caractères hexadécimaux' }),
+  APP_ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, { error: 'APP_ENCRYPTION_KEY : 64 caractères hexadécimaux' }),
   /** URL publique du site (liens dans les e-mails). */
   APP_PUBLIC_URL: z.string().url().default('http://localhost:5173'),
   /** Origines autorisées (CORS), séparées par des virgules. Vide = même origine uniquement. */
@@ -40,7 +42,10 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
 });
 
-export type AppConfig = z.infer<typeof envSchema> & { cookieSecure: boolean; isProduction: boolean };
+export type AppConfig = z.infer<typeof envSchema> & {
+  cookieSecure: boolean;
+  isProduction: boolean;
+};
 
 let cached: AppConfig | null = null;
 
@@ -48,7 +53,9 @@ export function loadConfig(): AppConfig {
   if (cached) return cached;
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
+    const details = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
     throw new Error(`Configuration invalide (variables d'environnement) :\n${details}`);
   }
   const env = parsed.data;

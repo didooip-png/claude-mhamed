@@ -10,7 +10,14 @@ import {
   type SwitchUserInput,
 } from '@pharmastock/shared';
 import { AppError } from '../../common/app-error.js';
-import { decryptSecret, encryptSecret, generateTotpSecret, randomToken, sha256Hex, verifyTotp } from '../../common/crypto.js';
+import {
+  decryptSecret,
+  encryptSecret,
+  generateTotpSecret,
+  randomToken,
+  sha256Hex,
+  verifyTotp,
+} from '../../common/crypto.js';
 import type { Actor, AuthUser, DeviceInfo } from '../../common/request-context.js';
 import { PrismaService, type Tx } from '../../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -109,7 +116,11 @@ export class AuthService {
   }
 
   /** Vérifie le jeton d'accès et renvoie l'utilisateur (session active, poste cohérent, écran non verrouillé). */
-  async authenticate(token: string, device: DeviceInfo | undefined, background: boolean): Promise<AuthUser> {
+  async authenticate(
+    token: string,
+    device: DeviceInfo | undefined,
+    background: boolean,
+  ): Promise<AuthUser> {
     let payload: AccessTokenPayload;
     try {
       payload = await this.jwt.verifyAsync<AccessTokenPayload>(token);
@@ -161,13 +172,19 @@ export class AuthService {
     // Verrouillage d'inactivité appliqué côté serveur (les requêtes d'arrière-plan ne comptent pas).
     const inactivityMinutes = await this.settings.get('security.inactivity_lock_minutes');
     if (inactivityMinutes > 0 && now - cached.lastSeenAt > inactivityMinutes * 60_000) {
-      await this.prisma.session.update({ where: { id: payload.sid }, data: { lockedAt: new Date() } });
+      await this.prisma.session.update({
+        where: { id: payload.sid },
+        data: { lockedAt: new Date() },
+      });
       this.cache.delete(payload.sid);
       throw new AppError('SCREEN_LOCKED');
     }
     if (!background && now - cached.lastSeenAt > LAST_SEEN_WRITE_INTERVAL_MS) {
       cached.lastSeenAt = now;
-      await this.prisma.session.update({ where: { id: payload.sid }, data: { lastSeenAt: new Date(now) } });
+      await this.prisma.session.update({
+        where: { id: payload.sid },
+        data: { lastSeenAt: new Date(now) },
+      });
     }
     return cached.user;
   }
@@ -176,7 +193,12 @@ export class AuthService {
   // Connexion
   // -------------------------------------------------------------------------
 
-  async login(input: LoginInput, device: DeviceInfo, ip: string | null, userAgent: string | null): Promise<AuthResult> {
+  async login(
+    input: LoginInput,
+    device: DeviceInfo,
+    ip: string | null,
+    userAgent: string | null,
+  ): Promise<AuthResult> {
     const settings = await this.settings.all();
     const user = await this.findUserWithRole({ username: input.username.trim().toLowerCase() });
     const deviceRef = { id: device.id, name: device.name };
@@ -208,7 +230,14 @@ export class AuthService {
 
     const passwordOk = await this.passwords.verify(user.passwordHash, input.password);
     if (!passwordOk) {
-      await this.registerFailure(user, 'password', deviceRef, ip, settings['security.max_failed_attempts'], settings['security.lock_duration_minutes']);
+      await this.registerFailure(
+        user,
+        'password',
+        deviceRef,
+        ip,
+        settings['security.max_failed_attempts'],
+        settings['security.lock_duration_minutes'],
+      );
       throw new AppError('INVALID_CREDENTIALS');
     }
     if (!user.isActive) {
@@ -225,7 +254,14 @@ export class AuthService {
     if (user.totpEnabled && user.totpSecret) {
       if (!input.totp) throw new AppError('TOTP_REQUIRED');
       if (!verifyTotp(decryptSecret(user.totpSecret), input.totp)) {
-        await this.registerFailure(user, 'totp', deviceRef, ip, settings['security.max_failed_attempts'], settings['security.lock_duration_minutes']);
+        await this.registerFailure(
+          user,
+          'totp',
+          deviceRef,
+          ip,
+          settings['security.max_failed_attempts'],
+          settings['security.lock_duration_minutes'],
+        );
         throw new AppError('TOTP_INVALID');
       }
     }
@@ -234,7 +270,12 @@ export class AuthService {
     if (device.status === 'PENDING') {
       const isAdmin = user.role.systemKey === 'ADMIN';
       if (isAdmin && !(await this.devices.hasApprovedDevice())) {
-        await this.devices.setStatus(device.id, 'APPROVED', this.systemActor(user, device, ip), true);
+        await this.devices.setStatus(
+          device.id,
+          'APPROVED',
+          this.systemActor(user, device, ip),
+          true,
+        );
       } else {
         await this.audit.recordStandalone({
           eventType: 'LOGIN_FAILED',
@@ -251,7 +292,12 @@ export class AuthService {
     return this.prisma.tx(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { failedAttempts: 0, pinFailedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+        data: {
+          failedAttempts: 0,
+          pinFailedAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+        },
       });
       const result = await this.createSession(tx, user, device.id, ip, userAgent);
       await this.audit.record(tx, {
@@ -269,7 +315,11 @@ export class AuthService {
     });
   }
 
-  private systemActor(user: NonNullable<UserWithRole>, device: DeviceInfo, ip: string | null): Actor {
+  private systemActor(
+    user: NonNullable<UserWithRole>,
+    device: DeviceInfo,
+    ip: string | null,
+  ): Actor {
     return {
       userId: user.id,
       userCode: user.code,
@@ -300,7 +350,12 @@ export class AuthService {
       });
       const attempts = kind === 'pin' ? updated.pinFailedAttempts : updated.failedAttempts;
       const userRef = { id: user.id, code: user.code, name: user.fullName };
-      const label = kind === 'pin' ? 'PIN' : kind === 'totp' ? 'code de double authentification' : 'mot de passe';
+      const label =
+        kind === 'pin'
+          ? 'PIN'
+          : kind === 'totp'
+            ? 'code de double authentification'
+            : 'mot de passe';
       await this.audit.record(tx, {
         eventType: kind === 'pin' ? 'PIN_FAILED' : 'LOGIN_FAILED',
         user: userRef,
@@ -361,7 +416,12 @@ export class AuthService {
     const accessToken = await this.signAccess(user.id, session.id, deviceId);
     return {
       sessionId: session.id,
-      auth: { accessToken, expiresIn: ACCESS_TOKEN_TTL_SECONDS, refreshToken, user: this.toMe(user) },
+      auth: {
+        accessToken,
+        expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+        refreshToken,
+        user: this.toMe(user),
+      },
     };
   }
 
@@ -379,7 +439,11 @@ export class AuthService {
     const hash = sha256Hex(refreshToken);
     const session = await this.prisma.session.findUnique({ where: { refreshTokenHash: hash } });
     if (session) {
-      if (session.revokedAt || session.expiresAt.getTime() < Date.now() || session.absoluteExpiresAt.getTime() < Date.now()) {
+      if (
+        session.revokedAt ||
+        session.expiresAt.getTime() < Date.now() ||
+        session.absoluteExpiresAt.getTime() < Date.now()
+      ) {
         throw new AppError('UNAUTHENTICATED');
       }
       if (session.deviceId !== device.id) throw new AppError('UNAUTHENTICATED');
@@ -388,13 +452,19 @@ export class AuthService {
     // Jeton déjà utilisé : toléré quelques secondes (onglets simultanés), sinon vol présumé → révocation.
     const previous = await this.prisma.session.findFirst({ where: { previousTokenHash: hash } });
     if (previous && !previous.revokedAt) {
-      if (Date.now() - previous.rotatedAt.getTime() < REFRESH_REUSE_GRACE_MS && previous.deviceId === device.id) {
+      if (
+        Date.now() - previous.rotatedAt.getTime() < REFRESH_REUSE_GRACE_MS &&
+        previous.deviceId === device.id
+      ) {
         return { session: previous, reused: true };
       }
       await this.prisma.tx(async (tx) => {
         await tx.session.update({
           where: { id: previous.id },
-          data: { revokedAt: new Date(), revokedReason: 'Réutilisation d’un jeton de renouvellement' },
+          data: {
+            revokedAt: new Date(),
+            revokedReason: 'Réutilisation d’un jeton de renouvellement',
+          },
         });
         await this.audit.record(tx, {
           eventType: 'SESSION_REVOKED',
@@ -402,7 +472,8 @@ export class AuthService {
           device: { id: device.id, name: device.name },
           entityType: 'session',
           entityId: previous.id,
-          summary: 'Session révoquée : réutilisation d’un jeton de renouvellement (vol de session présumé)',
+          summary:
+            'Session révoquée : réutilisation d’un jeton de renouvellement (vol de session présumé)',
         });
       });
       this.invalidateCache(previous.id);
@@ -426,7 +497,12 @@ export class AuthService {
     return this.rotate(session.id, session.refreshTokenHash, user, device.id);
   }
 
-  private async rotate(sessionId: string, currentHash: string, user: NonNullable<UserWithRole>, deviceId: string): Promise<AuthResult> {
+  private async rotate(
+    sessionId: string,
+    currentHash: string,
+    user: NonNullable<UserWithRole>,
+    deviceId: string,
+  ): Promise<AuthResult> {
     const refreshToken = randomToken(48);
     const now = new Date();
     const updated = await this.prisma.session.updateMany({
@@ -438,7 +514,25 @@ export class AuthService {
         expiresAt: new Date(now.getTime() + REFRESH_TTL_MS),
       },
     });
-    if (updated.count !== 1) throw new AppError('UNAUTHENTICATED');
+    if (updated.count !== 1) {
+      // Rotation concurrente (deux onglets / requêtes simultanées) : l'autre requête a déjà
+      // renouvelé le jeton. On délivre un jeton d'accès sans nouveau cookie (délai de grâce).
+      const current = await this.prisma.session.findUnique({ where: { id: sessionId } });
+      if (
+        current &&
+        !current.revokedAt &&
+        current.previousTokenHash === currentHash &&
+        Date.now() - current.rotatedAt.getTime() < REFRESH_REUSE_GRACE_MS
+      ) {
+        return {
+          accessToken: await this.signAccess(user.id, sessionId, deviceId),
+          expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+          refreshToken: null,
+          user: this.toMe(user),
+        };
+      }
+      throw new AppError('UNAUTHENTICATED');
+    }
     return {
       accessToken: await this.signAccess(user.id, sessionId, deviceId),
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
@@ -488,7 +582,14 @@ export class AuthService {
     }
     if (!user.pinHash) throw new AppError('PIN_NOT_SET');
     if (!(await this.passwords.verify(user.pinHash, pin))) {
-      await this.registerFailure(user, 'pin', context.device, context.ip, settings['security.max_failed_attempts'], settings['security.lock_duration_minutes']);
+      await this.registerFailure(
+        user,
+        'pin',
+        context.device,
+        context.ip,
+        settings['security.max_failed_attempts'],
+        settings['security.lock_duration_minutes'],
+      );
       throw new AppError('INVALID_PIN');
     }
     if (user.pinFailedAttempts > 0) {
@@ -497,14 +598,25 @@ export class AuthService {
     return user;
   }
 
-  async switchUser(actor: Actor, input: SwitchUserInput, device: DeviceInfo, userAgent: string | null): Promise<AuthResult> {
-    const target = await this.checkPin(input.userCode, input.pin, { device: { id: device.id, name: device.name }, ip: actor.ip });
+  async switchUser(
+    actor: Actor,
+    input: SwitchUserInput,
+    device: DeviceInfo,
+    userAgent: string | null,
+  ): Promise<AuthResult> {
+    const target = await this.checkPin(input.userCode, input.pin, {
+      device: { id: device.id, name: device.name },
+      ip: actor.ip,
+    });
     if (target.mustChangePassword) throw new AppError('PASSWORD_CHANGE_REQUIRED');
     const result = await this.prisma.tx(async (tx) => {
       if (actor.sessionId) {
         await tx.session.update({
           where: { id: actor.sessionId },
-          data: { revokedAt: new Date(), revokedReason: `Changement d’utilisateur vers ${target.code}` },
+          data: {
+            revokedAt: new Date(),
+            revokedReason: `Changement d’utilisateur vers ${target.code}`,
+          },
         });
       }
       const created = await this.createSession(tx, target, device.id, actor.ip, userAgent);
@@ -528,18 +640,70 @@ export class AuthService {
 
   async lock(actor: Actor): Promise<void> {
     if (!actor.sessionId) return;
-    await this.prisma.session.update({ where: { id: actor.sessionId }, data: { lockedAt: new Date() } });
+    await this.prisma.session.update({
+      where: { id: actor.sessionId },
+      data: { lockedAt: new Date() },
+    });
     this.invalidateCache(actor.sessionId);
   }
 
-  /** Déverrouille l'écran avec le PIN de l'utilisateur de la session (via le cookie de renouvellement). */
-  async unlock(refreshToken: string | undefined, pin: string, device: DeviceInfo, ip: string | null): Promise<AuthResult> {
+  /**
+   * Déverrouille l'écran avec le PIN (via le cookie de renouvellement). Si un autre utilisateur
+   * saisit son code + PIN sur un poste partagé, la session verrouillée est fermée et une
+   * nouvelle session est ouverte pour lui (changement rapide d'utilisateur).
+   */
+  async unlock(
+    refreshToken: string | undefined,
+    pin: string,
+    device: DeviceInfo,
+    ip: string | null,
+    userCode?: string,
+    userAgent: string | null = null,
+  ): Promise<AuthResult> {
     const { session } = await this.findSessionForRefresh(refreshToken, device);
     const owner = await this.prisma.user.findUnique({ where: { id: session.userId } });
     if (!owner) throw new AppError('UNAUTHENTICATED');
-    const user = await this.checkPin(owner.code, pin, { device: { id: device.id, name: device.name }, ip });
+    if (userCode && userCode.trim().toUpperCase() !== owner.code) {
+      const target = await this.checkPin(userCode, pin, {
+        device: { id: device.id, name: device.name },
+        ip,
+      });
+      if (target.mustChangePassword) throw new AppError('PASSWORD_CHANGE_REQUIRED');
+      const result = await this.prisma.tx(async (tx) => {
+        await tx.session.update({
+          where: { id: session.id },
+          data: {
+            revokedAt: new Date(),
+            revokedReason: `Changement d’utilisateur vers ${target.code}`,
+          },
+        });
+        const created = await this.createSession(tx, target, device.id, ip, userAgent);
+        await this.audit.record(tx, {
+          eventType: 'USER_SWITCHED',
+          user: { id: target.id, code: target.code, name: target.fullName },
+          device: { id: device.id, name: device.name },
+          ip,
+          entityType: 'user',
+          entityId: target.id,
+          entityRef: target.code,
+          summary: `Changement d’utilisateur sur « ${device.name} » (écran verrouillé) : ${owner.code} → ${target.code}`,
+          metadata: { previousUserId: owner.id, previousUserCode: owner.code },
+          notify: false,
+        });
+        return created.auth;
+      });
+      this.invalidateCache(session.id);
+      return result;
+    }
+    const user = await this.checkPin(owner.code, pin, {
+      device: { id: device.id, name: device.name },
+      ip,
+    });
     await this.prisma.tx(async (tx) => {
-      await tx.session.update({ where: { id: session.id }, data: { lockedAt: null, lastSeenAt: new Date() } });
+      await tx.session.update({
+        where: { id: session.id },
+        data: { lockedAt: null, lastSeenAt: new Date() },
+      });
       await this.audit.record(tx, {
         eventType: 'SCREEN_UNLOCKED',
         user: { id: user.id, code: user.code, name: user.fullName },
@@ -558,7 +722,10 @@ export class AuthService {
 
   /** Confirmation d'une opération par le PIN de l'utilisateur connecté. */
   async confirmOwnPin(actor: Actor, pin: string): Promise<void> {
-    await this.checkPin(actor.userCode, pin, { device: actor.deviceId ? { id: actor.deviceId, name: actor.deviceName ?? '' } : null, ip: actor.ip });
+    await this.checkPin(actor.userCode, pin, {
+      device: actor.deviceId ? { id: actor.deviceId, name: actor.deviceName ?? '' } : null,
+      ip: actor.ip,
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -569,13 +736,27 @@ export class AuthService {
     const user = await this.findUserWithRole({ id: actor.userId });
     if (!user) throw new AppError('UNAUTHENTICATED');
     if (!(await this.passwords.verify(user.passwordHash, input.currentPassword))) {
-      throw new AppError('INVALID_CREDENTIALS', undefined, { status: 400, message: 'Mot de passe actuel incorrect.' });
+      throw new AppError('INVALID_CREDENTIALS', undefined, {
+        status: 400,
+        message: 'Mot de passe actuel incorrect.',
+      });
     }
     const minLength = await this.settings.get('security.password_min_length');
     const policyError = checkPasswordPolicy(input.newPassword, minLength);
-    if (policyError) throw new AppError('PASSWORD_POLICY', { fieldErrors: { newPassword: policyError } }, { status: 400 });
+    if (policyError)
+      throw new AppError(
+        'PASSWORD_POLICY',
+        { fieldErrors: { newPassword: policyError } },
+        { status: 400 },
+      );
     if (await this.passwords.verify(user.passwordHash, input.newPassword)) {
-      throw new AppError('PASSWORD_POLICY', { fieldErrors: { newPassword: 'Le nouveau mot de passe doit être différent de l’ancien.' } }, { status: 400 });
+      throw new AppError(
+        'PASSWORD_POLICY',
+        {
+          fieldErrors: { newPassword: 'Le nouveau mot de passe doit être différent de l’ancien.' },
+        },
+        { status: 400 },
+      );
     }
     const hash = await this.passwords.hash(input.newPassword);
     await this.prisma.tx(async (tx) => {
@@ -606,7 +787,10 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: actor.userId } });
     if (!user) throw new AppError('UNAUTHENTICATED');
     if (!(await this.passwords.verify(user.passwordHash, currentPassword))) {
-      throw new AppError('INVALID_CREDENTIALS', undefined, { status: 400, message: 'Mot de passe actuel incorrect.' });
+      throw new AppError('INVALID_CREDENTIALS', undefined, {
+        status: 400,
+        message: 'Mot de passe actuel incorrect.',
+      });
     }
     const pinHash = await this.passwords.hash(newPin);
     await this.prisma.tx(async (tx) => {
@@ -637,12 +821,16 @@ export class AuthService {
     });
     const issuer = encodeURIComponent('PharmaStock');
     const label = encodeURIComponent(`PharmaStock:${actor.userCode}`);
-    return { secret, otpauthUrl: `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&digits=6&period=30` };
+    return {
+      secret,
+      otpauthUrl: `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&digits=6&period=30`,
+    };
   }
 
   async totpEnable(actor: Actor, code: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: actor.userId } });
-    if (!user?.totpSecret || !verifyTotp(decryptSecret(user.totpSecret), code)) throw new AppError('TOTP_INVALID', undefined, { status: 400 });
+    if (!user?.totpSecret || !verifyTotp(decryptSecret(user.totpSecret), code))
+      throw new AppError('TOTP_INVALID', undefined, { status: 400 });
     await this.prisma.tx(async (tx) => {
       await tx.user.update({ where: { id: user.id }, data: { totpEnabled: true } });
       await this.audit.record(tx, {
@@ -660,10 +848,16 @@ export class AuthService {
   async totpDisable(actor: Actor, currentPassword: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: actor.userId } });
     if (!user || !(await this.passwords.verify(user.passwordHash, currentPassword))) {
-      throw new AppError('INVALID_CREDENTIALS', undefined, { status: 400, message: 'Mot de passe actuel incorrect.' });
+      throw new AppError('INVALID_CREDENTIALS', undefined, {
+        status: 400,
+        message: 'Mot de passe actuel incorrect.',
+      });
     }
     await this.prisma.tx(async (tx) => {
-      await tx.user.update({ where: { id: user.id }, data: { totpEnabled: false, totpSecret: null } });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { totpEnabled: false, totpSecret: null },
+      });
       await this.audit.record(tx, {
         eventType: 'USER_UPDATED',
         actor,
@@ -681,7 +875,11 @@ export class AuthService {
 
   listActiveSessions() {
     return this.prisma.session.findMany({
-      where: { revokedAt: null, expiresAt: { gt: new Date() }, absoluteExpiresAt: { gt: new Date() } },
+      where: {
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        absoluteExpiresAt: { gt: new Date() },
+      },
       orderBy: { lastSeenAt: 'desc' },
       select: {
         id: true,
@@ -698,7 +896,10 @@ export class AuthService {
 
   async revokeSession(sessionId: string, actor: Actor): Promise<void> {
     await this.prisma.tx(async (tx) => {
-      const session = await tx.session.findUnique({ where: { id: sessionId }, include: { user: true } });
+      const session = await tx.session.findUnique({
+        where: { id: sessionId },
+        include: { user: true },
+      });
       if (!session) throw new AppError('NOT_FOUND');
       if (session.revokedAt) return;
       await tx.session.update({

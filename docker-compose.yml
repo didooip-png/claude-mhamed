@@ -1,0 +1,31 @@
+# Environnement de développement : PostgreSQL + Mailpit (capture des e-mails).
+# L'API et le site tournent sur la machine (pnpm dev) pour un rechargement instantané.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pharmastock
+      POSTGRES_PASSWORD: pharmastock
+      POSTGRES_DB: pharmastock
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pharmastock']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '1025:1025' # SMTP (à configurer dans Administration → E-mail : hôte localhost, port 1025, sans sécurité)
+      - '8025:8025' # Interface web : http://localhost:8025
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  pgdata:

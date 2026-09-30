@@ -25,7 +25,8 @@ export class OverrideRequirements {
 
   /** Exige une permission ; si l'acteur ne l'a pas, elle devra être autorisée par un administrateur. */
   require(permission: Permission, why: string): void {
-    if (!this.actor.permissions.has(permission) && !this.missing.has(permission)) this.missing.set(permission, why);
+    if (!this.actor.permissions.has(permission) && !this.missing.has(permission))
+      this.missing.set(permission, why);
   }
 
   get needed(): boolean {
@@ -91,7 +92,12 @@ export class OverrideService {
       });
     }
 
-    const grant: OverrideGrant = { id: authorizer.id, code: authorizer.code, name: authorizer.fullName, reason: override.reason };
+    const grant: OverrideGrant = {
+      id: authorizer.id,
+      code: authorizer.code,
+      name: authorizer.fullName,
+      reason: override.reason,
+    };
     await this.audit.record(tx, {
       eventType: 'ADMIN_OVERRIDE',
       actor,

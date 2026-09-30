@@ -9,14 +9,16 @@ export const ERROR_MESSAGES = {
   CONFLICT: 'Cette opération entre en conflit avec l’état actuel des données.',
   VERSION_CONFLICT:
     'Cet élément a été modifié par un autre utilisateur entre-temps. Rechargez la page pour voir la dernière version.',
-  INTERNAL_ERROR: 'Erreur interne du serveur. Réessayez ; si le problème persiste, contactez l’administrateur.',
+  INTERNAL_ERROR:
+    'Erreur interne du serveur. Réessayez ; si le problème persiste, contactez l’administrateur.',
   RATE_LIMITED: 'Trop de requêtes. Patientez quelques instants puis réessayez.',
   IDEMPOTENCY_CONFLICT: 'Cette opération est déjà en cours de traitement. Patientez un instant.',
   // Authentification / accès
   UNAUTHENTICATED: 'Votre session a expiré. Reconnectez-vous.',
   INVALID_CREDENTIALS: 'Identifiant ou mot de passe incorrect.',
   INVALID_PIN: 'Code utilisateur ou PIN incorrect.',
-  ACCOUNT_LOCKED: 'Compte temporairement verrouillé après plusieurs échecs. Réessayez plus tard ou contactez un administrateur.',
+  ACCOUNT_LOCKED:
+    'Compte temporairement verrouillé après plusieurs échecs. Réessayez plus tard ou contactez un administrateur.',
   ACCOUNT_DISABLED: 'Ce compte est désactivé. Contactez un administrateur.',
   PASSWORD_CHANGE_REQUIRED: 'Vous devez changer votre mot de passe avant de continuer.',
   PASSWORD_POLICY: 'Le mot de passe ne respecte pas la politique de sécurité.',
@@ -26,7 +28,8 @@ export const ERROR_MESSAGES = {
   PIN_NOT_SET: 'Aucun PIN n’est défini pour cet utilisateur.',
   FORBIDDEN: 'Vous n’avez pas la permission d’effectuer cette action.',
   OVERRIDE_REQUIRED: 'Cette action nécessite l’autorisation d’un administrateur (code + PIN).',
-  OVERRIDE_INVALID: 'Autorisation refusée : code administrateur ou PIN incorrect, ou droits insuffisants.',
+  OVERRIDE_INVALID:
+    'Autorisation refusée : code administrateur ou PIN incorrect, ou droits insuffisants.',
   DEVICE_UNKNOWN: 'Ce poste n’est pas enregistré. Rechargez la page pour l’enregistrer.',
   DEVICE_PENDING: 'Ce poste est en attente d’approbation par un administrateur.',
   DEVICE_REVOKED: 'Ce poste a été révoqué. Contactez un administrateur.',
@@ -59,7 +62,8 @@ export const ERROR_MESSAGES = {
   SALE_EMPTY: 'Le panier est vide.',
   SALE_NOT_VALIDATED: 'Cette vente n’est pas validée.',
   SALE_ALREADY_CANCELLED: 'Cette vente est déjà annulée.',
-  SALE_HAS_RETURNS: 'Cette vente a fait l’objet d’un retour : elle ne peut plus être annulée ni modifiée. Utilisez un retour complémentaire.',
+  SALE_HAS_RETURNS:
+    'Cette vente a fait l’objet d’un retour : elle ne peut plus être annulée ni modifiée. Utilisez un retour complémentaire.',
   PAYMENT_MISMATCH: 'Le total des paiements ne correspond pas au montant à régler.',
   PRESCRIPTION_REQUIRED: 'Les informations d’ordonnance sont obligatoires pour ce produit.',
   CREDIT_LIMIT_EXCEEDED: 'Plafond de crédit du client dépassé.',
@@ -83,7 +87,8 @@ export const ERROR_MESSAGES = {
   EMAIL_DISABLED: 'L’envoi d’e-mails est désactivé ou le serveur SMTP n’est pas configuré.',
   EMAIL_INVALID: 'Adresse e-mail invalide.',
   SMTP_ERROR: 'Erreur de connexion au serveur SMTP.',
-  CRITICAL_ALERTS_REQUIRED: 'Au moins un administrateur doit rester abonné par e-mail aux alertes critiques.',
+  CRITICAL_ALERTS_REQUIRED:
+    'Au moins un administrateur doit rester abonné par e-mail aux alertes critiques.',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;

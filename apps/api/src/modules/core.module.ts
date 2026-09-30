@@ -9,6 +9,7 @@ import { DevicesService } from './devices/devices.service.js';
 import { SitesService } from './devices/sites.service.js';
 import { SequencesService } from './sequences/sequences.service.js';
 import { SettingsService } from './settings/settings.service.js';
+import { SetupService } from './setup/setup.service.js';
 
 const services = [
   AuditService,
@@ -19,6 +20,7 @@ const services = [
   SitesService,
   SequencesService,
   SettingsService,
+  SetupService,
 ];
 
 /** Services transverses (audit, paramètres, numérotation, authentification, postes). */

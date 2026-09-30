@@ -18,7 +18,8 @@ export const SkipDevice = () => SetMetadata(SKIP_DEVICE, true);
 /** Route accessible même si l'utilisateur doit changer son mot de passe. */
 export const AllowPasswordChange = () => SetMetadata(ALLOW_PASSWORD_CHANGE, true);
 /** Permission(s) exigée(s) — toutes doivent être présentes. Contrôle côté serveur. */
-export const RequirePermission = (...permissions: Permission[]) => SetMetadata(REQUIRED_PERMISSIONS, permissions);
+export const RequirePermission = (...permissions: Permission[]) =>
+  SetMetadata(REQUIRED_PERMISSIONS, permissions);
 
 export function currentActor(): Actor {
   const ctx = RequestContext.get();
@@ -38,4 +39,6 @@ export function currentActor(): Actor {
 }
 
 /** Acteur courant (utilisateur + poste + IP). */
-export const CurrentActor = createParamDecorator((_data: unknown, _ctx: ExecutionContext) => currentActor());
+export const CurrentActor = createParamDecorator((_data: unknown, _ctx: ExecutionContext) =>
+  currentActor(),
+);

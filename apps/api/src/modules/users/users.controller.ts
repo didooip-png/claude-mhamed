@@ -41,7 +41,11 @@ export class UsersController {
 
   @RequirePermission('admin.users')
   @Put(':id')
-  update(@IdParam() id: string, @ZBody(updateUserSchema) body: UpdateUserInput, @CurrentActor() actor: Actor) {
+  update(
+    @IdParam() id: string,
+    @ZBody(updateUserSchema) body: UpdateUserInput,
+    @CurrentActor() actor: Actor,
+  ) {
     return this.users.update(id, body, actor);
   }
 
@@ -62,7 +66,11 @@ export class UsersController {
   @RequirePermission('admin.users')
   @Post(':id/reset-credentials')
   @HttpCode(204)
-  async reset(@IdParam() id: string, @ZBody(resetCredentialsSchema) body: { password?: string; pin?: string }, @CurrentActor() actor: Actor) {
+  async reset(
+    @IdParam() id: string,
+    @ZBody(resetCredentialsSchema) body: { password?: string; pin?: string },
+    @CurrentActor() actor: Actor,
+  ) {
     await this.users.resetCredentials(id, body, actor);
   }
 

@@ -119,7 +119,7 @@ export function lotUnitCost(qty: number, netUnitPriceHt: Millimes, freeQty: numb
 // Formatage et saisie
 // ---------------------------------------------------------------------------
 
-const NBSP = ' ';
+const NBSP = '\u202f';
 
 function groupThousands(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
@@ -155,7 +155,10 @@ export function formatMoney(amount: Millimes, options: FormatMoneyOptions = {}):
  * Retourne `null` si la saisie est invalide ou a plus de 3 décimales.
  */
 export function parseMoney(input: string): Millimes | null {
-  const cleaned = input.replace(/[\s  ]/g, '').replace(/DT$/i, '').replace(',', '.');
+  const cleaned = input
+    .replace(/[\s\u00a0\u202f]/g, '')
+    .replace(/DT$/i, '')
+    .replace(',', '.');
   if (!/^-?\d+(\.\d{0,3})?$/.test(cleaned)) return null;
   const negative = cleaned.startsWith('-');
   const [intPart = '0', fracPart = ''] = cleaned.replace('-', '').split('.');

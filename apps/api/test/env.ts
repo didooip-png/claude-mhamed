@@ -1,6 +1,7 @@
 /** Variables d'environnement des tests (base PostgreSQL dédiée). */
 export const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgresql://pharmastock:pharmastock@localhost:5432/pharmastock_test?schema=public';
+  process.env.TEST_DATABASE_URL ??
+  'postgresql://pharmastock:pharmastock@localhost:5432/pharmastock_test?schema=public';
 
 export function applyTestEnv(): void {
   process.env.NODE_ENV = 'test';

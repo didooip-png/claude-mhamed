@@ -95,7 +95,9 @@ export class AuditService {
     const def = AUDIT_EVENTS[input.eventType];
     const severity = input.severity ?? def.severity;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${AUDIT_LOCK_KEY}::bigint)`;
-    const last = await tx.$queryRaw<{ hash: string }[]>`SELECT hash FROM audit_logs ORDER BY id DESC LIMIT 1`;
+    const last = await tx.$queryRaw<
+      { hash: string }[]
+    >`SELECT hash FROM audit_logs ORDER BY id DESC LIMIT 1`;
     const prevHash = last[0]?.hash ?? AUDIT_GENESIS_HASH;
     const occurredAt = now();
 
@@ -212,10 +214,20 @@ export class AuditService {
           reason: row.reason,
         };
         if (row.prevHash !== prevHash) {
-          return this.report(false, checked, row.id, 'Chaînage rompu : une entrée précédente a été supprimée ou insérée.');
+          return this.report(
+            false,
+            checked,
+            row.id,
+            'Chaînage rompu : une entrée précédente a été supprimée ou insérée.',
+          );
         }
         if (computeAuditHash(prevHash, entry) !== row.hash) {
-          return this.report(false, checked, row.id, 'Contenu altéré : le hash ne correspond plus au contenu de l’entrée.');
+          return this.report(
+            false,
+            checked,
+            row.id,
+            'Contenu altéré : le hash ne correspond plus au contenu de l’entrée.',
+          );
         }
         prevHash = row.hash;
         lastId = row.id;
@@ -225,8 +237,17 @@ export class AuditService {
     return this.report(true, checked, null, null);
   }
 
-  private report(ok: boolean, checked: number, brokenAtId: bigint | null, reason: string | null): IntegrityReport {
-    if (!ok) this.logger.error({ brokenAtId: brokenAtId?.toString(), reason }, 'Intégrité du journal compromise');
+  private report(
+    ok: boolean,
+    checked: number,
+    brokenAtId: bigint | null,
+    reason: string | null,
+  ): IntegrityReport {
+    if (!ok)
+      this.logger.error(
+        { brokenAtId: brokenAtId?.toString(), reason },
+        'Intégrité du journal compromise',
+      );
     return {
       ok,
       checked,

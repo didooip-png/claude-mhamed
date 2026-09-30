@@ -39,13 +39,21 @@ describe('computeSaleTotals', () => {
 
 describe('priceReceiptLine', () => {
   it('calcule le total HT net, la TVA et le coût unitaire avec UG', () => {
-    expect(priceReceiptLine({ qty: 10, freeQty: 2, unitPriceHt: 3_000, discountBp: 0, tvaBp: 700 })).toEqual({
+    expect(
+      priceReceiptLine({ qty: 10, freeQty: 2, unitPriceHt: 3_000, discountBp: 0, tvaBp: 700 }),
+    ).toEqual({
       lineTotalHt: 30_000,
       lineTva: 2_100,
       lineTotalTtc: 32_100,
       unitCostHt: 2_500,
     });
-    const withDiscount = priceReceiptLine({ qty: 10, freeQty: 0, unitPriceHt: 3_000, discountBp: 1000, tvaBp: 0 });
+    const withDiscount = priceReceiptLine({
+      qty: 10,
+      freeQty: 0,
+      unitPriceHt: 3_000,
+      discountBp: 1000,
+      tvaBp: 0,
+    });
     expect(withDiscount.lineTotalHt).toBe(27_000);
     expect(withDiscount.unitCostHt).toBe(2_700);
   });

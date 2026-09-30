@@ -32,12 +32,22 @@ export async function createApp(options: { logger?: boolean } = {}): Promise<INe
   app.use(cookieParser());
   app.useBodyParser('json', { limit: '2mb' });
   app.setGlobalPrefix('api/v1');
-  const origins = config.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+  const origins = config.CORS_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   if (origins.length > 0) {
     app.enableCors({
       origin: origins,
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'X-Device-Token', 'Idempotency-Key', 'X-Background', 'X-Request-Id'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Device-Id',
+        'X-Device-Token',
+        'Idempotency-Key',
+        'X-Background',
+        'X-Request-Id',
+      ],
     });
   }
   app.enableShutdownHooks();

@@ -44,7 +44,10 @@ const events = {
   CLIENT_UPDATED: { severity: 'INFO', label: 'Client modifié' },
   SUPPLIER_CREATED: { severity: 'INFO', label: 'Fournisseur créé' },
   SUPPLIER_UPDATED: { severity: 'INFO', label: 'Fournisseur modifié' },
-  CREDIT_LIMIT_OVERRIDE: { severity: 'WARNING', label: 'Dépassement du plafond de crédit autorisé' },
+  CREDIT_LIMIT_OVERRIDE: {
+    severity: 'WARNING',
+    label: 'Dépassement du plafond de crédit autorisé',
+  },
   ADMIN_OVERRIDE: { severity: 'WARNING', label: 'Autorisation par code administrateur' },
   OVERRIDE_FAILED: { severity: 'WARNING', label: 'Échec d’autorisation administrateur' },
   CASH_DISCREPANCY: { severity: 'WARNING', label: 'Écart de caisse' },
@@ -80,8 +83,14 @@ const events = {
   STOCK_INCONSISTENCY: { severity: 'CRITICAL', label: 'Incohérence de stock détectée' },
   EMAIL_SENT_MANUALLY: { severity: 'INFO', label: 'Document envoyé par e-mail' },
   EMAIL_CANCELLED: { severity: 'INFO', label: 'Envoi d’e-mail annulé' },
-  CLIENT_EMAIL_CONSENT_CHANGED: { severity: 'INFO', label: 'Consentement e-mail du client modifié' },
-  NOTIFICATION_SUBSCRIPTIONS_CHANGED: { severity: 'INFO', label: 'Abonnements aux notifications modifiés' },
+  CLIENT_EMAIL_CONSENT_CHANGED: {
+    severity: 'INFO',
+    label: 'Consentement e-mail du client modifié',
+  },
+  NOTIFICATION_SUBSCRIPTIONS_CHANGED: {
+    severity: 'INFO',
+    label: 'Abonnements aux notifications modifiés',
+  },
   EMAIL_TEMPLATE_CHANGED: { severity: 'WARNING', label: 'Modèle d’e-mail modifié' },
 } as const satisfies Record<string, { severity: Severity; label: string }>;
 

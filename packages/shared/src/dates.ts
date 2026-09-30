@@ -44,21 +44,30 @@ export function formatIsoDate(iso: string | null | undefined): string {
 }
 
 /** Instant → « 30/09/2026 » dans le fuseau donné. */
-export function formatDate(value: Date | string | null | undefined, timeZone = DEFAULT_TIMEZONE): string {
+export function formatDate(
+  value: Date | string | null | undefined,
+  timeZone = DEFAULT_TIMEZONE,
+): string {
   if (!value) return '';
   const p = partsInTz(new Date(value), timeZone);
   return `${pad(p.day)}/${pad(p.month)}/${p.year}`;
 }
 
 /** Instant → « 30/09/2026 14:05:32 » dans le fuseau donné. */
-export function formatDateTime(value: Date | string | null | undefined, timeZone = DEFAULT_TIMEZONE): string {
+export function formatDateTime(
+  value: Date | string | null | undefined,
+  timeZone = DEFAULT_TIMEZONE,
+): string {
   if (!value) return '';
   const p = partsInTz(new Date(value), timeZone);
   return `${pad(p.day)}/${pad(p.month)}/${p.year} ${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
 }
 
 /** Instant → « 14:05 » dans le fuseau donné. */
-export function formatTime(value: Date | string | null | undefined, timeZone = DEFAULT_TIMEZONE): string {
+export function formatTime(
+  value: Date | string | null | undefined,
+  timeZone = DEFAULT_TIMEZONE,
+): string {
   if (!value) return '';
   const p = partsInTz(new Date(value), timeZone);
   return `${pad(p.hour)}:${pad(p.minute)}`;
@@ -67,7 +76,12 @@ export function formatTime(value: Date | string | null | undefined, timeZone = D
 /** Date calendaire (AAAA-MM-JJ) et heure d'un instant dans le fuseau donné. */
 export function localParts(value: Date, timeZone = DEFAULT_TIMEZONE) {
   const p = partsInTz(value, timeZone);
-  return { date: `${p.year}-${pad(p.month)}-${pad(p.day)}`, hour: p.hour, minute: p.minute, weekday: weekdayOf(`${p.year}-${pad(p.month)}-${pad(p.day)}`) };
+  return {
+    date: `${p.year}-${pad(p.month)}-${pad(p.day)}`,
+    hour: p.hour,
+    minute: p.minute,
+    weekday: weekdayOf(`${p.year}-${pad(p.month)}-${pad(p.day)}`),
+  };
 }
 
 function lastDayOfMonth(year: number, month: number): number {

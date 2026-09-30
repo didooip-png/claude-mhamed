@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { checkPasswordPolicy, type CreateUserInput, type UpdateUserInput } from '@pharmastock/shared';
+import {
+  checkPasswordPolicy,
+  type CreateUserInput,
+  type UpdateUserInput,
+} from '@pharmastock/shared';
 import { AppError } from '../../common/app-error.js';
 import type { Actor } from '../../common/request-context.js';
 import { PrismaService, type Tx } from '../../prisma/prisma.service.js';
@@ -35,7 +39,10 @@ export class UsersService {
   ) {}
 
   list() {
-    return this.prisma.user.findMany({ select: userSelect, orderBy: [{ isActive: 'desc' }, { code: 'asc' }] });
+    return this.prisma.user.findMany({
+      select: userSelect,
+      orderBy: [{ isActive: 'desc' }, { code: 'asc' }],
+    });
   }
 
   /** Liste minimale (code + nom) pour les filtres (mouchard, ventes, abonnements). */
@@ -55,19 +62,29 @@ export class UsersService {
   private async assertPassword(password: string): Promise<void> {
     const min = await this.settings.get('security.password_min_length');
     const error = checkPasswordPolicy(password, min);
-    if (error) throw new AppError('PASSWORD_POLICY', { fieldErrors: { password: error } }, { status: 400 });
+    if (error)
+      throw new AppError('PASSWORD_POLICY', { fieldErrors: { password: error } }, { status: 400 });
   }
 
   async create(input: CreateUserInput, actor: Actor) {
     await this.assertPassword(input.password);
-    const [passwordHash, pinHash] = await Promise.all([this.passwords.hash(input.password), this.passwords.hash(input.pin)]);
+    const [passwordHash, pinHash] = await Promise.all([
+      this.passwords.hash(input.password),
+      this.passwords.hash(input.pin),
+    ]);
     return this.prisma.tx(async (tx) => {
       const role = await tx.role.findUnique({ where: { id: input.roleId } });
-      if (!role) throw new AppError('VALIDATION_ERROR', { fieldErrors: { roleId: 'Rôle inconnu' } });
-      const clash = await tx.user.findFirst({ where: { OR: [{ code: input.code }, { username: input.username }] } });
+      if (!role)
+        throw new AppError('VALIDATION_ERROR', { fieldErrors: { roleId: 'Rôle inconnu' } });
+      const clash = await tx.user.findFirst({
+        where: { OR: [{ code: input.code }, { username: input.username }] },
+      });
       if (clash) {
         throw new AppError('DUPLICATE_CODE', {
-          fieldErrors: clash.code === input.code ? { code: 'Code déjà utilisé' } : { username: 'Identifiant déjà utilisé' },
+          fieldErrors:
+            clash.code === input.code
+              ? { code: 'Code déjà utilisé' }
+              : { username: 'Identifiant déjà utilisé' },
         });
       }
       const user = await tx.user.create({
@@ -91,14 +108,21 @@ export class UsersService {
         entityId: user.id,
         entityRef: user.code,
         summary: `Utilisateur ${user.code} — ${user.fullName} créé (rôle ${role.name})`,
-        after: { code: user.code, username: user.username, fullName: user.fullName, role: role.name },
+        after: {
+          code: user.code,
+          username: user.username,
+          fullName: user.fullName,
+          role: role.name,
+        },
       });
       return user;
     });
   }
 
   private async assertNotLastAdmin(tx: Tx, userId: string): Promise<void> {
-    const admins = await tx.user.count({ where: { isActive: true, role: { systemKey: 'ADMIN' }, NOT: { id: userId } } });
+    const admins = await tx.user.count({
+      where: { isActive: true, role: { systemKey: 'ADMIN' }, NOT: { id: userId } },
+    });
     if (admins === 0) throw new AppError('LAST_ADMIN');
   }
 
@@ -108,8 +132,10 @@ export class UsersService {
       if (!before) throw new AppError('NOT_FOUND');
       if (before.version !== input.version) throw new AppError('VERSION_CONFLICT');
       const role = await tx.role.findUnique({ where: { id: input.roleId } });
-      if (!role) throw new AppError('VALIDATION_ERROR', { fieldErrors: { roleId: 'Rôle inconnu' } });
-      if (before.role.systemKey === 'ADMIN' && role.systemKey !== 'ADMIN') await this.assertNotLastAdmin(tx, id);
+      if (!role)
+        throw new AppError('VALIDATION_ERROR', { fieldErrors: { roleId: 'Rôle inconnu' } });
+      if (before.role.systemKey === 'ADMIN' && role.systemKey !== 'ADMIN')
+        await this.assertNotLastAdmin(tx, id);
       const user = await tx.user.update({
         where: { id },
         data: {
@@ -143,14 +169,20 @@ export class UsersService {
       if (!user) throw new AppError('NOT_FOUND');
       if (user.isActive === active) return;
       if (!active) {
-        if (user.id === actor.userId) throw new AppError('FORBIDDEN', undefined, { message: 'Vous ne pouvez pas désactiver votre propre compte.' });
+        if (user.id === actor.userId)
+          throw new AppError('FORBIDDEN', undefined, {
+            message: 'Vous ne pouvez pas désactiver votre propre compte.',
+          });
         if (user.role.systemKey === 'ADMIN') await this.assertNotLastAdmin(tx, id);
         await tx.session.updateMany({
           where: { userId: id, revokedAt: null },
           data: { revokedAt: new Date(), revokedReason: 'Utilisateur désactivé' },
         });
       }
-      await tx.user.update({ where: { id }, data: { isActive: active, version: { increment: 1 }, updatedById: actor.userId } });
+      await tx.user.update({
+        where: { id },
+        data: { isActive: active, version: { increment: 1 }, updatedById: actor.userId },
+      });
       await this.audit.record(tx, {
         eventType: active ? 'USER_ENABLED' : 'USER_DISABLED',
         actor,
@@ -164,7 +196,10 @@ export class UsersService {
   }
 
   async resetCredentials(id: string, input: { password?: string; pin?: string }, actor: Actor) {
-    if (!input.password && !input.pin) throw new AppError('VALIDATION_ERROR', { fieldErrors: { password: 'Mot de passe ou PIN requis' } });
+    if (!input.password && !input.pin)
+      throw new AppError('VALIDATION_ERROR', {
+        fieldErrors: { password: 'Mot de passe ou PIN requis' },
+      });
     if (input.password) await this.assertPassword(input.password);
     const passwordHash = input.password ? await this.passwords.hash(input.password) : undefined;
     const pinHash = input.pin ? await this.passwords.hash(input.pin) : undefined;
@@ -204,7 +239,10 @@ export class UsersService {
     await this.prisma.tx(async (tx) => {
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw new AppError('NOT_FOUND');
-      await tx.user.update({ where: { id }, data: { lockedUntil: null, failedAttempts: 0, pinFailedAttempts: 0 } });
+      await tx.user.update({
+        where: { id },
+        data: { lockedUntil: null, failedAttempts: 0, pinFailedAttempts: 0 },
+      });
       await this.audit.record(tx, {
         eventType: 'USER_UPDATED',
         actor,

@@ -12,5 +12,12 @@
     "strictPropertyInitialization": false,
     "noEmit": true
   },
-  "include": ["src", "test", "prisma/seed.ts", "prisma/seed", "prisma.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "prisma/seed.ts",
+    "prisma/seed",
+    "prisma.config.ts",
+    "vitest.config.ts"
+  ]
 }

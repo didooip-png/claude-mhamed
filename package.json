@@ -18,5 +18,16 @@
     "db:migrate": "pnpm --filter @pharmastock/api run db:migrate",
     "db:seed": "pnpm --filter @pharmastock/api run db:seed",
     "db:reset": "pnpm --filter @pharmastock/api run db:reset"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
   }
 }

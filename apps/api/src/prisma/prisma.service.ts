@@ -31,18 +31,21 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
    * Toute opération touchant le stock ou l'argent passe par ici.
    */
   tx<T>(fn: (tx: Tx) => Promise<T>, options: { timeout?: number } = {}): Promise<T> {
-    return this.$transaction(async (tx) => {
-      const hooks: Hook[] = [];
-      beforeCommitHooks.set(tx, hooks);
-      const result = await fn(tx);
-      for (let i = 0; i < hooks.length; i += 1) await hooks[i]!();
-      beforeCommitHooks.delete(tx);
-      return result;
-    }, {
-      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-      maxWait: 10_000,
-      timeout: options.timeout ?? 30_000,
-    });
+    return this.$transaction(
+      async (tx) => {
+        const hooks: Hook[] = [];
+        beforeCommitHooks.set(tx, hooks);
+        const result = await fn(tx);
+        for (let i = 0; i < hooks.length; i += 1) await hooks[i]!();
+        beforeCommitHooks.delete(tx);
+        return result;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        maxWait: 10_000,
+        timeout: options.timeout ?? 30_000,
+      },
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

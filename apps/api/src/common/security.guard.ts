@@ -37,7 +37,11 @@ export class SecurityGuard implements CanActivate {
     if (!ctx) throw new AppError('INTERNAL_ERROR');
 
     if (!this.meta<boolean>(SKIP_DEVICE, context)) {
-      const device = await this.devices.resolve(req.header('x-device-id'), req.header('x-device-token'), ctx.ip);
+      const device = await this.devices.resolve(
+        req.header('x-device-id'),
+        req.header('x-device-token'),
+        ctx.ip,
+      );
       ctx.device = device;
       if (device.status === 'PENDING' && !this.meta<boolean>(ALLOW_PENDING_DEVICE, context)) {
         throw new AppError('DEVICE_PENDING');
@@ -49,7 +53,11 @@ export class SecurityGuard implements CanActivate {
     const header = req.header('authorization') ?? '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
     if (!token) throw new AppError('UNAUTHENTICATED');
-    const user = await this.auth.authenticate(token, ctx.device, req.header('x-background') === '1');
+    const user = await this.auth.authenticate(
+      token,
+      ctx.device,
+      req.header('x-background') === '1',
+    );
     ctx.user = user;
 
     if (user.mustChangePassword && !this.meta<boolean>(ALLOW_PASSWORD_CHANGE, context)) {

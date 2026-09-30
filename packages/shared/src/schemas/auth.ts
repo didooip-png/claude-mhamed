@@ -10,7 +10,9 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export const pinSchema = z.string().regex(/^\d{4,6}$/, { error: 'Le PIN doit comporter 4 à 6 chiffres' });
+export const pinSchema = z
+  .string()
+  .regex(/^\d{4,6}$/, { error: 'Le PIN doit comporter 4 à 6 chiffres' });
 
 export const switchUserSchema = z.object({
   userCode: z.string().trim().min(1).max(20),
@@ -18,7 +20,10 @@ export const switchUserSchema = z.object({
 });
 export type SwitchUserInput = z.infer<typeof switchUserSchema>;
 
-export const unlockSchema = z.object({ pin: pinSchema });
+export const unlockSchema = z.object({
+  pin: pinSchema,
+  userCode: z.string().trim().min(1).max(20).optional(),
+});
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1).max(200),
@@ -41,7 +46,8 @@ export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
 
 /** Politique de mot de passe : longueur minimale + au moins une lettre et un chiffre. */
 export function checkPasswordPolicy(password: string, minLength = 8): string | null {
-  if (password.length < minLength) return `Le mot de passe doit contenir au moins ${minLength} caractères.`;
+  if (password.length < minLength)
+    return `Le mot de passe doit contenir au moins ${minLength} caractères.`;
   if (!/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) {
     return 'Le mot de passe doit contenir au moins une lettre et un chiffre.';
   }

@@ -56,17 +56,26 @@ export class DevicesService {
   }
 
   /** Résout le poste d'une requête (en-têtes X-Device-Id + X-Device-Token). */
-  async resolve(deviceId: string | undefined, token: string | undefined, ip: string | null): Promise<DeviceInfo> {
-    if (!deviceId || !token || !/^[0-9a-f-]{36}$/i.test(deviceId)) throw new AppError('DEVICE_UNKNOWN');
+  async resolve(
+    deviceId: string | undefined,
+    token: string | undefined,
+    ip: string | null,
+  ): Promise<DeviceInfo> {
+    if (!deviceId || !token || !/^[0-9a-f-]{36}$/i.test(deviceId))
+      throw new AppError('DEVICE_UNKNOWN');
     const device = await this.prisma.device.findUnique({ where: { id: deviceId } });
     if (!device || device.tokenHash !== sha256Hex(token)) throw new AppError('DEVICE_UNKNOWN');
     if (device.status === 'REVOKED') throw new AppError('DEVICE_REVOKED');
     let status = device.status;
-    if (status === 'PENDING' && !(await this.settings.get('security.require_device_approval'))) status = 'APPROVED';
+    if (status === 'PENDING' && !(await this.settings.get('security.require_device_approval')))
+      status = 'APPROVED';
     const last = this.lastSeenWrites.get(device.id) ?? 0;
     if (Date.now() - last > LAST_SEEN_WRITE_INTERVAL_MS) {
       this.lastSeenWrites.set(device.id, Date.now());
-      await this.prisma.device.update({ where: { id: device.id }, data: { lastSeenAt: new Date(), lastIp: ip } });
+      await this.prisma.device.update({
+        where: { id: device.id },
+        data: { lastSeenAt: new Date(), lastIp: ip },
+      });
     }
     return { id: device.id, name: device.name, status, siteId: device.siteId };
   }
@@ -93,7 +102,12 @@ export class DevicesService {
     });
   }
 
-  async setStatus(id: string, status: 'APPROVED' | 'REVOKED', actor: Actor, auto = false): Promise<void> {
+  async setStatus(
+    id: string,
+    status: 'APPROVED' | 'REVOKED',
+    actor: Actor,
+    auto = false,
+  ): Promise<void> {
     await this.prisma.tx(async (tx) => {
       const device = await tx.device.findUnique({ where: { id } });
       if (!device) throw new AppError('NOT_FOUND');
@@ -102,7 +116,13 @@ export class DevicesService {
         where: { id },
         data:
           status === 'APPROVED'
-            ? { status, approvedById: actor.userId, approvedAt: new Date(), revokedAt: null, revokedById: null }
+            ? {
+                status,
+                approvedById: actor.userId,
+                approvedAt: new Date(),
+                revokedAt: null,
+                revokedById: null,
+              }
             : { status, revokedById: actor.userId, revokedAt: new Date() },
       });
       if (status === 'REVOKED') {
