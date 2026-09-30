@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { LockScreen } from '@/components/layout/app-shell';
 import { TooltipProvider } from '@/components/ui/misc';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { setupPwa } from '@/lib/pwa';
 import { queryClient } from '@/lib/queries';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import {
@@ -50,6 +51,7 @@ function ThemedToaster() {
   return <Toaster richColors closeButton position="bottom-right" theme={theme} />;
 }
 
+setupPwa();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>

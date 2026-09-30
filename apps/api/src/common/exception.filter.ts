@@ -39,6 +39,13 @@ export function mapDatabaseError(err: unknown): AppError | null {
   return null;
 }
 
+function isClientHttpError(e: unknown): e is { status?: number; statusCode?: number } {
+  if (typeof e !== 'object' || e === null) return false;
+  const { status, statusCode } = e as { status?: unknown; statusCode?: unknown };
+  const n = typeof status === 'number' ? status : statusCode;
+  return typeof n === 'number' && n >= 400 && n < 500;
+}
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger('Exceptions');
@@ -68,6 +75,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                   ? 'VALIDATION_ERROR'
                   : 'INTERNAL_ERROR';
       body = { code, message: errorMessage(code) };
+    } else if (isClientHttpError(exception)) {
+      // Erreurs de l'analyseur de requêtes (corps trop volumineux, JSON invalide…).
+      status = exception.status ?? exception.statusCode ?? HttpStatus.BAD_REQUEST;
+      const code = 'VALIDATION_ERROR';
+      body = {
+        code,
+        message: status === 413 ? 'La requête est trop volumineuse.' : errorMessage(code),
+      };
     }
 
     if (status >= 500) {

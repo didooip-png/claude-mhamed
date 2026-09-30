@@ -1,3 +1,4 @@
+import './zod-jitless.js';
 export * from './money.js';
 export * from './pricing.js';
 export * from './permissions.js';

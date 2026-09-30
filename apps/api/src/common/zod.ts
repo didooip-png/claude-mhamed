@@ -11,7 +11,19 @@ export function zodIssuesToDetails(error: z.ZodError): Record<string, unknown> {
   return { fieldErrors };
 }
 
+/** PostgreSQL refuse le caractère NUL dans un texte : on le rejette dès l'entrée (400, pas 500). */
+function containsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000');
+  if (depth > 8 || value === null || typeof value !== 'object') return false;
+  const items = Array.isArray(value) ? value : Object.values(value);
+  return items.some((v) => containsNul(v, depth + 1));
+}
+
 export function parseOrThrow<S extends z.ZodType>(schema: S, value: unknown): z.infer<S> {
+  if (containsNul(value))
+    throw new AppError('VALIDATION_ERROR', {
+      fieldErrors: { _: 'Caractère non autorisé dans la saisie.' },
+    });
   const result = schema.safeParse(value);
   if (!result.success) throw new AppError('VALIDATION_ERROR', zodIssuesToDetails(result.error));
   return result.data;
