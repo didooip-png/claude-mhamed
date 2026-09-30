@@ -441,7 +441,11 @@ function ReceiptEditor({ receipt }: { receipt: Receipt | null }) {
       )}
       <Card className="mb-4">
         <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField label="Source d’approvisionnement" required>
+          <FormField
+            label="Source d’approvisionnement"
+            required
+            help="Fournisseur : achat habituel (fournisseur obligatoire). Don ou Transfert : entrée en stock sans achat. Autre : cas exceptionnel, un motif est demandé."
+          >
             <NativeSelect
               value={header.sourceType}
               onChange={(e) =>

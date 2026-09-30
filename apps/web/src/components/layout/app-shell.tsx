@@ -45,6 +45,8 @@ import { useAuth, useMe } from '@/lib/auth';
 import { useSettings } from '@/lib/queries';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
+import { GuidedTour } from '@/components/help/guided-tour';
+import { HelpButton } from '@/components/help/help-panel';
 import { InstallBanner, InstallButton } from '@/components/install-button';
 import { OverrideDialogHost } from '@/components/override-dialog';
 import { NotificationBell } from '@/pages/notifications/notifications';
@@ -62,6 +64,13 @@ function useVisibleNav(): NavItem[] {
     .filter((item) => (item.children ? item.children.length > 0 : AVAILABLE_ROUTES.has(item.to)));
 }
 
+/** Repères de la visite guidée (`data-tour`) posés sur certaines entrées du menu. */
+const TOUR_IDS: Record<string, string> = {
+  '/pos': 'nav-pos',
+  '/admin': 'nav-admin',
+  '/reports': 'nav-reports',
+};
+
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const items = useVisibleNav();
   const location = useLocation();
@@ -70,6 +79,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <nav
       className="flex h-full flex-col gap-1 overflow-y-auto p-2"
       aria-label="Navigation principale"
+      data-tour="nav"
     >
       <div className="mb-2 flex items-center gap-2 px-2 py-2">
         <img src="/icon.svg" alt="" className="size-7" />
@@ -89,6 +99,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               to={item.to}
               end={item.to === '/'}
               onClick={onNavigate}
+              data-tour={TOUR_IDS[item.to]}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -107,7 +118,10 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         );
         return (
           <details key={item.label} open={open} className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground select-none hover:bg-muted hover:text-foreground">
+            <summary
+              data-tour={TOUR_IDS[item.to]}
+              className="flex cursor-pointer list-none items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground select-none hover:bg-muted hover:text-foreground"
+            >
               <Icon className="size-4 shrink-0" />
               <span className="truncate">{item.label}</span>
               <ChevronDown className="ml-auto size-3.5 transition-transform group-open:rotate-180" />
@@ -367,6 +381,7 @@ function BottomNav({ onMenu }: { onMenu: () => void }) {
   return (
     <nav
       aria-label="Navigation rapide"
+      data-tour="nav"
       className="flex shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
       {items.map((item) => {
@@ -376,6 +391,7 @@ function BottomNav({ onMenu }: { onMenu: () => void }) {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            data-tour={item.to === '/pos' ? 'nav-pos' : undefined}
             className={({ isActive }) => cn(tab, isActive && 'text-primary')}
           >
             <Icon className="size-5" />
@@ -462,6 +478,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
+              data-tour="search"
               aria-label="Rechercher"
               className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-muted/50 text-muted-foreground hover:bg-muted sm:h-8 sm:w-full sm:max-w-md sm:justify-start sm:gap-2 sm:px-2.5 sm:text-sm"
             >
@@ -472,7 +489,10 @@ export function AppShell() {
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <InstallButton />
               <ConnectionIndicator />
-              <NotificationBell />
+              <span data-tour="bell" className="inline-flex">
+                <NotificationBell />
+              </span>
+              <HelpButton />
               <Tooltip content="Poste de travail courant">
                 <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
                   <Monitor className="size-3.5" />
@@ -481,7 +501,7 @@ export function AppShell() {
               </Tooltip>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2" data-tour="user">
                     <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
                       {me.code.slice(0, 3)}
                     </span>
@@ -533,6 +553,7 @@ export function AppShell() {
       </div>
       {!fullBleed && <BottomNav onMenu={() => setMobileNav(true)} />}
       <InstallBanner />
+      <GuidedTour />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SwitchUserDialog open={switchOpen} onOpenChange={setSwitchOpen} />
       <OverrideDialogHost />

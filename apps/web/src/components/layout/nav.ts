@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Coins,
   LayoutDashboard,
+  LifeBuoy,
   type LucideIcon,
   Package,
   Receipt,
@@ -154,6 +155,7 @@ export const NAV: NavItem[] = [
       { label: 'Sauvegardes', to: '/admin/backups', anyOf: ['admin.backups'] },
     ],
   },
+  { label: 'Aide', to: '/help', icon: LifeBuoy },
 ];
 
 /** Routes réellement disponibles (les autres sont masquées tant qu'elles ne sont pas livrées). */
@@ -195,6 +197,7 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/admin/backups',
   '/reports',
   '/purchase-orders',
+  '/help',
 ]);
 
 export const ACTIVITY_ICON = Activity;

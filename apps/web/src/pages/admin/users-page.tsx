@@ -294,7 +294,13 @@ function UserDialog({ user, onClose }: { user: UserRow | 'new' | null; onClose: 
             save.mutate();
           }}
         >
-          <FormField label="Code utilisateur" required error={errors.code} hint="Ex. PRE03">
+          <FormField
+            label="Code utilisateur"
+            required
+            error={errors.code}
+            hint="Ex. PRE03"
+            help="Le code court de la personne (2 à 10 lettres ou chiffres). Il figure sur les documents et les autorisations, et ne peut plus être modifié ni réattribué."
+          >
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
@@ -340,7 +346,12 @@ function UserDialog({ user, onClose }: { user: UserRow | 'new' | null; onClose: 
                   onChange={set('password')}
                 />
               </FormField>
-              <FormField label="PIN (4 à 6 chiffres)" required error={errors.pin}>
+              <FormField
+                label="PIN (4 à 6 chiffres)"
+                required
+                error={errors.pin}
+                help="Code personnel pour déverrouiller l’écran et valider les ventes. La personne pourra le changer dans Mon compte."
+              >
                 <Input
                   type="password"
                   inputMode="numeric"

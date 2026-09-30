@@ -241,7 +241,12 @@ export function ProductFormDialog({
                   ))}
               </NativeSelect>
             </FormField>
-            <FormField label="DCI (molécule)" error={errors.dci} className="sm:col-span-2">
+            <FormField
+              label="DCI (molécule)"
+              error={errors.dci}
+              className="sm:col-span-2"
+              help="Dénomination commune internationale : le nom de la molécule active (ex. paracétamol). Elle sert à retrouver le produit à la recherche et à proposer des équivalents."
+            >
               <Input
                 value={f.dci}
                 onChange={(e) => set('dci', e.target.value)}
@@ -320,7 +325,11 @@ export function ProductFormDialog({
               </NativeSelect>
             </FormField>
             {can('catalog.view_costs') && (
-              <FormField label="Prix d’achat de référence HT" error={errors.refPurchasePriceHt}>
+              <FormField
+                label="Prix d’achat de référence HT"
+                error={errors.refPurchasePriceHt}
+                help="Prix d’achat hors taxe de référence, utilisé pour estimer la marge à l’écran. Le coût réel de chaque lot est enregistré à la réception."
+              >
                 <MoneyInput
                   value={f.refPurchasePriceHt}
                   onValueChange={(v) => set('refPurchasePriceHt', v)}
@@ -329,6 +338,7 @@ export function ProductFormDialog({
             )}
             <FormField
               label="Prix de vente TTC (boîte)"
+              help="Prix affiché en caisse pour une boîte, toutes taxes comprises. Le prix hors taxe est calculé d’après la TVA choisie."
               required
               error={errors.salePriceTtc}
               hint={saleHt !== null ? `HT : ${fmt.money(saleHt)}` : undefined}
@@ -351,6 +361,7 @@ export function ProductFormDialog({
             )}
             <FormField
               label="Unités par boîte"
+              help="Nombre d’unités (comprimés, ampoules…) dans une boîte. Nécessaire pour la vente à l’unité. Non modifiable dès que le produit a du stock."
               error={errors.unitsPerPack}
               hint={locked ? 'Non modifiable : le produit a du stock' : undefined}
             >
@@ -396,7 +407,10 @@ export function ProductFormDialog({
               <Switch checked={f.returnable} onCheckedChange={(v) => set('returnable', v)} /> Retour
               client autorisé
             </label>
-            <FormField label="Classement (produit à tableau)">
+            <FormField
+              label="Classement (produit à tableau)"
+              help="Classement réglementaire des substances vénéneuses (tableaux A, B, C). La vente d’un produit classé demande l’ordonnance et alimente le registre des produits à tableau."
+            >
               <NativeSelect
                 value={f.controlledClass}
                 onChange={(e) =>
@@ -410,7 +424,11 @@ export function ProductFormDialog({
                 ))}
               </NativeSelect>
             </FormField>
-            <FormField label="Stock minimum (alerte)" error={errors.minStock}>
+            <FormField
+              label="Stock minimum (alerte)"
+              error={errors.minStock}
+              help="En dessous de ce nombre d’unités, le produit passe en « bas » et une alerte est émise. Le réapprovisionnement l’utilise aussi pour calculer le seuil de commande."
+            >
               <Input
                 type="number"
                 min={0}
@@ -418,7 +436,11 @@ export function ProductFormDialog({
                 onChange={(e) => set('minStock', Math.max(0, Number(e.target.value) || 0))}
               />
             </FormField>
-            <FormField label="Stock maximum" error={errors.maxStock}>
+            <FormField
+              label="Stock maximum"
+              error={errors.maxStock}
+              help="Niveau visé après une commande : le réapprovisionnement propose de commander jusqu’à ce stock. Laissé vide, il est calculé d’après les ventes récentes."
+            >
               <Input
                 type="number"
                 min={0}

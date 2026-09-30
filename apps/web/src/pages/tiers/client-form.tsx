@@ -163,6 +163,7 @@ export function ClientFormDialog({
           </FormField>
           <FormField
             label="Plafond de crédit"
+            help="Montant maximal que le client peut devoir à l’établissement. Au-delà, une vente à crédit exige l’autorisation d’un administrateur."
             hint="0 = pas de vente à crédit"
             error={errors.creditLimit}
           >
@@ -172,14 +173,21 @@ export function ClientFormDialog({
               disabled={!canCredit}
             />
           </FormField>
-          <FormField label="Remise habituelle" error={errors.defaultDiscountBp}>
+          <FormField
+            label="Remise habituelle"
+            error={errors.defaultDiscountBp}
+            help="Pourcentage appliqué automatiquement à chaque vente à ce client. Il reste soumis au plafond de remise des Paramètres."
+          >
             <PercentInput
               value={f.defaultDiscountBp}
               onValueChange={(v) => setF((p) => ({ ...p, defaultDiscountBp: v }))}
               disabled={!canCredit}
             />
           </FormField>
-          <FormField label="Délai de paiement (jours)">
+          <FormField
+            label="Délai de paiement (jours)"
+            help="Nombre de jours accordés au client pour régler une facture à crédit. Il fixe l’échéance et alimente la balance âgée."
+          >
             <Input
               type="number"
               min={0}

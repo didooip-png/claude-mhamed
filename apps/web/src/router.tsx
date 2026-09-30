@@ -22,6 +22,7 @@ function lazyPage<K extends string>(
   };
 }
 
+const HelpPage = lazyPage(() => import('@/pages/help/help-page'), 'HelpPage');
 const AccountPage = lazyPage(() => import('@/pages/account/account-page'), 'AccountPage');
 const DevicesPage = lazyPage(() => import('@/pages/admin/devices-page'), 'DevicesPage');
 const RolesPage = lazyPage(() => import('@/pages/admin/roles-page'), 'RolesPage');
@@ -137,6 +138,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'account', element: <AccountPage /> },
+      { path: 'help', element: <HelpPage /> },
       {
         path: 'audit',
         element: (

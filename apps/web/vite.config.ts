@@ -38,13 +38,33 @@ export default defineConfig({
           { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
         // Raccourcis (appui long sur l'icône, Android / Windows).
         shortcuts: [
-          { name: 'Caisse', short_name: 'Caisse', url: '/pos', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
-          { name: 'Ventes', short_name: 'Ventes', url: '/sales', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
-          { name: 'État du stock', short_name: 'Stock', url: '/stock', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+          {
+            name: 'Caisse',
+            short_name: 'Caisse',
+            url: '/pos',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Ventes',
+            short_name: 'Ventes',
+            url: '/sales',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'État du stock',
+            short_name: 'Stock',
+            url: '/stock',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+          },
         ],
       },
     }),

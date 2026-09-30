@@ -1,5 +1,6 @@
 import { parseMoney, parsePercentToBp, toMoneyInput } from '@pharmastock/shared';
 import * as React from 'react';
+import { HelpTip } from '@/components/help/help-tip';
 import { Input, Label } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +8,7 @@ export function FormField({
   label,
   error,
   hint,
+  help,
   required,
   className,
   children,
@@ -15,6 +17,8 @@ export function FormField({
   label: string;
   error?: string;
   hint?: React.ReactNode;
+  /** Bulle d'aide « ? » à côté du libellé, pour les champs difficiles. */
+  help?: React.ReactNode;
   required?: boolean;
   className?: string;
   htmlFor?: string;
@@ -29,10 +33,20 @@ export function FormField({
       : children;
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <Label htmlFor={id}>
-        {label}
-        {required && <span className="ml-0.5 text-destructive">*</span>}
-      </Label>
+      {help ? (
+        <div className="flex items-center gap-1.5">
+          <Label htmlFor={id}>
+            {label}
+            {required && <span className="ml-0.5 text-destructive">*</span>}
+          </Label>
+          <HelpTip label={`Aide : ${label}`}>{help}</HelpTip>
+        </div>
+      ) : (
+        <Label htmlFor={id}>
+          {label}
+          {required && <span className="ml-0.5 text-destructive">*</span>}
+        </Label>
+      )}
       {field}
       {error ? (
         <p className="text-xs text-destructive">{error}</p>

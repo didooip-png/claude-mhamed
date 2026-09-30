@@ -19,3 +19,4 @@ export * from './schemas/stock-ops.js';
 export * from './schemas/notifications.js';
 export * from './reports.js';
 export * from './schemas/orders.js';
+export * from './help/index.js';

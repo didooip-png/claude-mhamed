@@ -284,7 +284,11 @@ export function PaymentDialog({
                   </FormField>
                   {r.method === 'CASH' && (
                     <>
-                      <FormField label="Montant remis" className="w-full sm:w-40">
+                      <FormField
+                        label="Montant remis"
+                        className="w-full sm:w-40"
+                        help="La somme réellement donnée par le client. Le rendu de monnaie se calcule tout seul. Laissez le montant à régler si le client donne le compte juste."
+                      >
                         <MoneyInput
                           value={r.tendered}
                           onValueChange={(v) => update(r.key, { tendered: v })}

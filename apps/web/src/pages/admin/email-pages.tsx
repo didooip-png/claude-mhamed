@@ -254,7 +254,11 @@ function SmtpCard() {
                   onChange={(e) => set('port', Number(e.target.value.replace(/\D/g, '')) || 0)}
                 />
               </FormField>
-              <FormField label="Sécurité" htmlFor="smtp-security">
+              <FormField
+                label="Sécurité"
+                htmlFor="smtp-security"
+                help="SSL/TLS sur le port 465 ou STARTTLS sur le port 587 : ce sont les deux réglages courants. « Aucune » n’est à utiliser qu’en réseau local, jamais sur Internet."
+              >
                 <NativeSelect
                   id="smtp-security"
                   value={form.security}
@@ -340,6 +344,7 @@ function SmtpCard() {
             </FormField>
             <FormField
               label="Copie cachée d’archivage"
+              help="Une copie de chaque e-mail envoyé à un client est adressée en copie cachée à cette adresse, pour conserver une trace chez vous."
               error={errors.bccArchive}
               hint="Chaque e-mail client envoyé en copie à cette adresse."
               htmlFor="smtp-bcc"
@@ -353,6 +358,7 @@ function SmtpCard() {
             </FormField>
             <FormField
               label="Limite d’envois par heure"
+              help="Protège contre l’envoi en rafale et contre le blocage par votre hébergeur de messagerie. Au-delà, les e-mails attendent l’heure suivante."
               error={errors.hourlyLimit}
               htmlFor="smtp-limit"
             >

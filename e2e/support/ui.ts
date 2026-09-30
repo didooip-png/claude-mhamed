@@ -7,6 +7,8 @@ export async function withDevice(context: BrowserContext, name: string): Promise
   const device = await newDevice(name);
   await context.addInitScript((d) => {
     localStorage.setItem('pharmastock.device', JSON.stringify(d));
+    // La visite guidée du premier lancement masquerait la page pendant les parcours.
+    localStorage.setItem('pharmastock.tour.disabled', '1');
   }, device);
   return device;
 }

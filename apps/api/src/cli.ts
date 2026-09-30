@@ -4,6 +4,7 @@
  *   pnpm --filter @pharmastock/api cli devices           Liste des postes
  *   pnpm --filter @pharmastock/api cli approve-device ID Approuver un poste
  *   pnpm --filter @pharmastock/api cli unlock-user CODE  Déverrouiller un compte
+ *   pnpm --filter @pharmastock/api cli reset-credentials CODE  Nouveau mot de passe (et PIN) d'un compte
  *   pnpm --filter @pharmastock/api cli verify-audit      Vérifier la chaîne du journal d'audit
  *   pnpm --filter @pharmastock/api cli backup            Sauvegarde immédiate de la base
  */
@@ -12,10 +13,13 @@ import { stdin as input, stdout as output } from 'node:process';
 import { createInterface } from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { NestFactory } from '@nestjs/core';
+import { checkPasswordPolicy } from '@pharmastock/shared';
 import { AppModule } from './app.module.js';
 import { installBigIntJson } from './common/json.js';
 import { AuditService } from './modules/audit/audit.service.js';
+import { PasswordService } from './modules/auth/password.service.js';
 import { BackupService } from './modules/backups/backup.service.js';
+import { SettingsService } from './modules/settings/settings.service.js';
 import { SetupService } from './modules/setup/setup.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 
@@ -110,6 +114,55 @@ async function main(): Promise<void> {
         console.log(`Compte ${user.code} déverrouillé.`);
         break;
       }
+      case 'reset-credentials': {
+        if (!arg) throw new Error('Usage : reset-credentials <CODE>');
+        const code = arg.toUpperCase();
+        const user = await prisma.user.findUnique({ where: { code } });
+        if (!user) throw new Error(`Utilisateur ${code} introuvable.`);
+        const minLength = await app.get(SettingsService).get('security.password_min_length');
+        const password = await ask('Nouveau mot de passe provisoire : ', true);
+        const policyError = checkPasswordPolicy(password, minLength);
+        if (policyError) throw new Error(policyError);
+        if (password !== (await ask('Confirmation : ', true)))
+          throw new Error('Les mots de passe ne correspondent pas.');
+        const pin = await ask(
+          'Nouveau PIN (4 à 6 chiffres, Entrée pour ne pas le changer) : ',
+          true,
+        );
+        if (pin && !/^\d{4,6}$/.test(pin)) throw new Error('Le PIN doit comporter 4 à 6 chiffres.');
+        const passwords = app.get(PasswordService);
+        const passwordHash = await passwords.hash(password);
+        const pinHash = pin ? await passwords.hash(pin) : undefined;
+        await prisma.tx(async (tx) => {
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              passwordHash,
+              mustChangePassword: true,
+              ...(pinHash ? { pinHash } : {}),
+              failedAttempts: 0,
+              pinFailedAttempts: 0,
+              lockedUntil: null,
+              version: { increment: 1 },
+            },
+          });
+          await tx.session.updateMany({
+            where: { userId: user.id, revokedAt: null },
+            data: { revokedAt: new Date(), revokedReason: 'Mot de passe réinitialisé' },
+          });
+        });
+        await app.get(AuditService).recordStandalone({
+          eventType: 'USER_CREDENTIALS_RESET',
+          entityType: 'user',
+          entityId: user.id,
+          entityRef: user.code,
+          summary: `Réinitialisation du mot de passe${pinHash ? ' et du PIN' : ''} de ${user.code} en ligne de commande (exploitation)`,
+        });
+        console.log(
+          `Identifiants de ${user.code} réinitialisés : le mot de passe devra être changé à la prochaine connexion.`,
+        );
+        break;
+      }
       case 'verify-audit': {
         const report = await app.get(AuditService).verifyIntegrity();
         console.log(
@@ -127,7 +180,7 @@ async function main(): Promise<void> {
       }
       default:
         console.log(
-          'Commandes : setup | devices | approve-device <id> | unlock-user <code> | verify-audit | backup',
+          'Commandes : setup | devices | approve-device <id> | unlock-user <code> | reset-credentials <code> | verify-audit | backup',
         );
     }
   } finally {
