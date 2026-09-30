@@ -19,10 +19,11 @@ win:
     - target: nsis
       arch: [x64]
   icon: build/icon.png
-  artifactName: PharmaStock-Setup-${version}.${ext}
+  artifactName: PharmaStock-${version}-win-x64.${ext}
   # Signature de code : à activer avec le certificat de la cliente (variables CSC_LINK / CSC_KEY_PASSWORD).
   signAndEditExecutable: true
 nsis:
+  artifactName: PharmaStock-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

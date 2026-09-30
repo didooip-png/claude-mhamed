@@ -7,18 +7,33 @@ le site : les deux peuvent être utilisés en même temps sur des postes différ
 
 Code : `apps/desktop`. Spécification : `docs/SPEC.md` §14.
 
-## Installer (poste de caisse)
+## Installer sur un poste de caisse
 
-1. Récupérer `PharmaStock-Setup-X.Y.Z.exe` (voir « Construire l'installateur »).
-2. Double-cliquer : installation **pour l'utilisateur courant**, sans droits d'administrateur, raccourci sur le bureau.
-   Windows SmartScreen peut afficher un avertissement tant que l'installateur n'est pas **signé** (voir plus bas).
-3. Au premier lancement, la fenêtre **Réglages du poste** s'ouvre :
+**Version portable (`PharmaStock-X.Y.Z-win-x64.zip`, recommandée — se construit sur le VPS Linux)**
+
+1. Copier le `.zip` sur le PC de caisse et le **décompresser** dans un dossier durable, par exemple `C:\PharmaStock`
+   (pas dans « Téléchargements »).
+2. Lancer `C:\PharmaStock\PharmaStock.exe`. Clic droit sur `PharmaStock.exe` → _Envoyer vers_ → _Bureau (créer un
+   raccourci)_ ; pour un lancement automatique avec Windows, cocher l'option dans les réglages du poste (étape 3).
+3. Mise à jour : décompresser le nouveau `.zip` **par-dessus** l'ancien dossier (fermer l'application avant). Les
+   réglages et la session sont dans `%APPDATA%\PharmaStock` et ne sont pas touchés. La version portable ne cherche pas
+   de mise à jour toute seule.
+4. Windows SmartScreen peut afficher un avertissement au premier lancement tant que l'application n'est pas
+   **signée** (voir plus bas) : _Informations complémentaires → Exécuter quand même_.
+
+**Version avec installateur (`PharmaStock-Setup-X.Y.Z.exe`, facultative)** : installation pour l'utilisateur courant,
+sans droits d'administrateur, raccourci sur le bureau, **mises à jour automatiques** proposées à la fermeture (si une
+adresse de publication est configurée). Elle se construit avec Wine (voir « Construire »).
+
+Puis, dans les deux cas :
+
+1. Au premier lancement, la fenêtre **Réglages du poste** s'ouvre :
    - **Adresse du serveur** : celle du navigateur (`https://pharmacie.exemple.tn`). `http://` n'est admis que sur le
      réseau local (`192.168.x.x`, `localhost`…) ;
    - **Imprimante des tickets** (80 mm) : c'est aussi celle qui reçoit l'ouverture du tiroir-caisse ;
    - **Imprimante des factures A4** ;
    - boutons **Ticket de test**, **Page A4 de test**, **Ouvrir le tiroir** pour vérifier avant d'enregistrer.
-4. Nommer le poste (le nom de l'ordinateur est proposé), se connecter ; un administrateur **approuve** le poste
+2. Nommer le poste (le nom de l'ordinateur est proposé), se connecter ; un administrateur **approuve** le poste
    dans _Administration → Postes de travail_ (le premier poste d'un administrateur est approuvé d'office).
 
 Les réglages se rouvrent avec _Poste → Réglages du poste_ (`Ctrl+,`) ou le menu du profil.
@@ -38,20 +53,34 @@ Les réglages se rouvrent avec _Poste → Réglages du poste_ (`Ctrl+,`) ou le m
 | Mises à jour    | `electron-updater`, téléchargement en arrière-plan ; l'installation est **proposée à la fermeture**, jamais en pleine vente.                                                                                                                                   |
 | Instance unique | Un second lancement ramène la fenêtre existante au premier plan.                                                                                                                                                                                               |
 
-## Construire l'installateur
+## Construire l'application (sur le VPS Linux)
 
-L'installateur Windows se construit **sur Windows** (composants natifs) : c'est le rôle du workflow
-`.github/workflows/desktop.yml` (onglet _Actions → Application Windows → Run workflow_, ou étiquette `desktop-vX.Y.Z`).
-Le fichier `PharmaStock-Setup-*.exe` est téléchargeable dans les artefacts du run.
+Aucun PC Windows ni GitHub n'est nécessaire : l'application Windows se **construit depuis Linux**, sur le VPS.
 
-En local, sur Windows :
+```bash
+# Prérequis (une fois) : Node.js 22 et pnpm
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt-get install -y nodejs && sudo corepack enable
 
-```powershell
-pnpm install
-pnpm --filter @pharmastock/desktop build
-pnpm --filter @pharmastock/desktop build:renderer
-pnpm --filter @pharmastock/desktop dist        # → apps/desktop/release/
+cd <dossier du code>
+bash migration/scripts/construire-application-windows.sh          # dossier portable .zip (sans Wine)
+# → apps/desktop/release/PharmaStock-X.Y.Z-win-x64.zip  (+ empreinte .sha256)
 ```
+
+Récupérer le fichier sur votre PC : `scp root@ADRESSE_IP:/chemin/apps/desktop/release/PharmaStock-*-win-x64.zip .`
+(~170 Mo ; le téléchargement d'Electron par le script demande un accès Internet sortant).
+
+**Installateur `.exe` (NSIS)** : `bash migration/scripts/construire-application-windows.sh --installateur`. Sous Linux, il
+demande **Wine** (`sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install -y wine wine32 wine64`) ;
+Wine permet aussi d'appliquer l'icône et les informations de version à `PharmaStock.exe`. Sans Wine, le script construit
+le dossier portable, qui contient exactement la même application.
+
+> Vérifié : la construction du paquet portable Windows depuis Linux (Electron 44, sans Wine) produit un dossier complet
+> (`PharmaStock.exe`, `app.asar`, SumatraPDF de `pdf-to-printer` hors archive). Non vérifié sur un vrai Windows :
+> voir la recette ci-dessous.
+
+Autres voies (facultatives) : le workflow GitHub `.github/workflows/desktop.yml` (onglet _Actions_ → _Application Windows_ →
+_Run workflow_) construit l'installateur sur un exécuteur Windows ; sur un PC Windows,
+`pnpm --filter @pharmastock/desktop dist:installer`.
 
 Développement (n'importe quel système) :
 
@@ -63,18 +92,20 @@ PHARMASTOCK_SERVER_URL=http://127.0.0.1:3000 pnpm --filter @pharmastock/desktop 
 
 ### Signature de code (recommandée)
 
-Sans signature, Windows SmartScreen met en garde à l'installation. Acheter un certificat de signature de code
-(OV ou EV) au nom de l'établissement, puis fournir au workflow les secrets `CSC_LINK` (certificat `.pfx` encodé en
-base64 ou URL) et `CSC_KEY_PASSWORD`. electron-builder signe alors l'installateur et l'exécutable.
+Sans signature, Windows SmartScreen met en garde au premier lancement. Acheter un certificat de signature de code
+(OV ou EV) au nom de l'établissement, puis fournir à la construction les variables `CSC_LINK` (certificat `.pfx` encodé
+en base64 ou chemin) et `CSC_KEY_PASSWORD` (Wine requis sous Linux pour signer, ou signer sur un poste Windows).
+electron-builder signe alors l'application.
 
-### Mises à jour automatiques
+### Mises à jour automatiques (version avec installateur)
 
 1. Héberger un dossier HTTPS servi statiquement (ex. `https://pharmacie.exemple.tn/desktop/`).
-2. Lancer le workflow avec l'entrée `update_url` (ou définir la variable de dépôt `DESKTOP_UPDATE_URL`).
+2. Construire avec l'adresse : `pnpm --filter @pharmastock/desktop exec electron-builder --win nsis --x64 --publish never -c.publish.provider=generic -c.publish.url=https://.../desktop/` (ou le workflow, entrée `update_url`).
 3. Publier dans ce dossier `PharmaStock-Setup-X.Y.Z.exe`, `latest.yml` et le `.blockmap`.
 4. Les postes vérifient au démarrage puis toutes les 4 heures ; la mise à jour est proposée à la fermeture.
 
-Sans adresse de publication, l'application ne cherche pas de mise à jour (mettre à jour = réinstaller).
+Sans adresse de publication (et avec la version portable), l'application ne cherche pas de mise à jour : on remplace le
+dossier par le nouveau `.zip`.
 
 ## Dépannage
 

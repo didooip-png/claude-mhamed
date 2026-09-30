@@ -1,7 +1,8 @@
 name: Application Windows
 
-# Construit l'installateur (NSIS, x64) sur un exécuteur Windows : nécessaire pour embarquer les
-# composants natifs d'impression. Déclenché à la main ou par une étiquette « desktop-v* ».
+# FACULTATIF : construit l'installateur Windows (NSIS, x64) sur un exécuteur GitHub Windows. La voie recommandée est de
+# construire sur le VPS Linux (migration/scripts/construire-application-windows.sh, docs/DESKTOP.md). Déclenché à la main
+# ou par une étiquette « desktop-v* ».
 on:
   workflow_dispatch:
     inputs:
@@ -11,9 +12,6 @@ on:
         default: ''
   push:
     tags: ['desktop-v*']
-    # Se relance aussi quand l'application de bureau ou ce workflow changent : la construction Windows reste vérifiée.
-    branches: ['claude/**', 'main']
-    paths: ['.github/workflows/desktop.yml', 'apps/desktop/**']
 
 jobs:
   windows:

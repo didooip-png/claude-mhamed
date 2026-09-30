@@ -222,6 +222,7 @@ restaurable, mesures de charge, 7 scénarios E2E verts.
 - **Application de bureau Windows** (`apps/desktop`, `docs/DESKTOP.md`) : build local du site (`app://pharmastock`), relais
   d'API par le processus principal, isolation stricte, impression silencieuse, tiroir-caisse ESC/POS, jeton du poste
   chiffré (safeStorage), réglages du poste (serveur, imprimantes, plein écran, démarrage avec Windows), instance
-  unique, mises à jour proposées à la fermeture, installateur NSIS x64 construit par GitHub Actions. Vérifiée en
+  unique, paquet portable Windows (`.zip`) **construit depuis le VPS Linux** (installateur NSIS x64 en option : Wine ou
+  GitHub Actions), mises à jour proposées à la fermeture (version installateur). Vérifiée en
   réel sous Linux/Xvfb (`pnpm --filter @pharmastock/desktop smoke`) ; **à valider sur le matériel** (imprimante, tiroir).
 - **Exploitation** : commande `cli reset-credentials <CODE>` (secours si l'unique administrateur perd son mot de passe).

@@ -99,9 +99,12 @@ de chaque rôle se télécharge aussi dans le site (menu **Aide → Manuels PDF*
 **7. Téléphones.** Sur Android (Chrome) ou iPhone (Safari), ouvrez `https://votre-domaine` : un bouton **Installer**
 apparaît en haut à droite et ajoute l'icône PharmaStock à l'écran d'accueil, sans passer par un magasin d'applications.
 
-**8. Postes de caisse Windows (facultatif).** Construisez l'installateur avec GitHub Actions
-(`code/docs/DESKTOP.md`), installez-le sur chaque poste de caisse : impression des tickets sans boîte de dialogue et
-ouverture du tiroir-caisse.
+**8. Postes de caisse Windows (facultatif).** L'application Windows (impression des tickets sans boîte de dialogue,
+ouverture du tiroir-caisse) se **construit sur votre VPS Linux**, sans ordinateur Windows ni GitHub : demandez à Claude
+Code « construis l'application Windows », ou lancez vous-même
+`bash migration/scripts/construire-application-windows.sh`. Vous récupérez un fichier `.zip` (~170 Mo) avec `scp`, vous le
+décompressez sur le PC de caisse (par exemple dans `C:\PharmaStock`) et vous lancez `PharmaStock.exe`. Tout est expliqué
+dans `code/docs/DESKTOP.md`.
 
 ---
 
@@ -129,7 +132,8 @@ vous** :
 - l'obtention du certificat HTTPS avec **votre** domaine ;
 - l'envoi d'e-mails avec **votre** serveur SMTP (et leur bonne réception : réglages SPF/DKIM/DMARC de votre domaine) ;
 - l'**imprimante de tickets** et le **tiroir-caisse** avec l'application Windows (recette dans `docs/DESKTOP.md`) ;
-- l'installateur Windows (le workflow GitHub existe mais n'a pas encore tourné) ;
+- l'application Windows sur un vrai PC (elle se construit et son contenu est vérifié depuis Linux, mais elle n'a jamais
+  tourné sur Windows) ;
 - la copie de sauvegarde vers un stockage S3 externe.
 
 `CONTEXTE_CLAUDE_CODE.md` liste ces points comme une **check-list de recette** que Claude Code déroulera avec vous.

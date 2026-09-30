@@ -71,15 +71,15 @@ dernier sans `UPDATE/DELETE` sur les journaux en ajout seul. L'API tourne en **u
 
 ### Ce qui n'a PAS pu être vérifié (à valider chez le propriétaire — c'est ta check-list de recette)
 
-| #   | Point                                                                       | Comment le valider                                                                                                                                                             |
-| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Certificat HTTPS Let's Encrypt avec le vrai domaine                         | DNS `A` → IP du VPS, ports 80/443 ouverts ; `verifier-deploiement.sh` (certificat, HSTS, redirection HTTP→HTTPS).                                                              |
-| 2   | Envoi d'e-mails avec le vrai SMTP, et **délivrabilité**                     | Le propriétaire configure le SMTP dans le site, « Tester la connexion » puis e-mail de test reçu (hors spam). Conseiller SPF/DKIM/DMARC (`docs/EXPLOITATION.md` §10).          |
-| 3   | Copie de sauvegarde **hors serveur** (S3)                                   | Renseigner `S3_*` dans `.env.production` (si le propriétaire a un stockage), redémarrer l'API, `cli backup`, vérifier « Copie hors site » dans _Administration → Sauvegardes_. |
-| 4   | **Restauration** réelle d'une sauvegarde                                    | Rejouer `docs/EXPLOITATION.md` §7.1 (test à blanc) une fois.                                                                                                                   |
-| 5   | Imprimante de tickets, tiroir-caisse, mises à jour de l'application Windows | `docs/DESKTOP.md` (recette). Exige du matériel : sur place.                                                                                                                    |
-| 6   | Installateur Windows                                                        | Lancer le workflow GitHub _Application Windows_ (jamais exécuté).                                                                                                              |
-| 7   | Performances sur ce VPS                                                     | Objectifs testés en développement (recherche produit < 200 ms…) ; contrôle rapide au ressenti + `docs/EXPLOITATION.md` §12.                                                    |
+| #   | Point                                                                       | Comment le valider                                                                                                                                                                |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Certificat HTTPS Let's Encrypt avec le vrai domaine                         | DNS `A` → IP du VPS, ports 80/443 ouverts ; `verifier-deploiement.sh` (certificat, HSTS, redirection HTTP→HTTPS).                                                                 |
+| 2   | Envoi d'e-mails avec le vrai SMTP, et **délivrabilité**                     | Le propriétaire configure le SMTP dans le site, « Tester la connexion » puis e-mail de test reçu (hors spam). Conseiller SPF/DKIM/DMARC (`docs/EXPLOITATION.md` §10).             |
+| 3   | Copie de sauvegarde **hors serveur** (S3)                                   | Renseigner `S3_*` dans `.env.production` (si le propriétaire a un stockage), redémarrer l'API, `cli backup`, vérifier « Copie hors site » dans _Administration → Sauvegardes_.    |
+| 4   | **Restauration** réelle d'une sauvegarde                                    | Rejouer `docs/EXPLOITATION.md` §7.1 (test à blanc) une fois.                                                                                                                      |
+| 5   | Imprimante de tickets, tiroir-caisse, mises à jour de l'application Windows | `docs/DESKTOP.md` (recette). Exige du matériel : sur place.                                                                                                                       |
+| 6   | Application Windows sur un vrai PC                                          | La construction depuis Linux (paquet portable `.zip`) est vérifiée jusqu'au contenu du paquet ; le lancement sur Windows est à valider sur un poste (`docs/DESKTOP.md`, recette). |
+| 7   | Performances sur ce VPS                                                     | Objectifs testés en développement (recherche produit < 200 ms…) ; contrôle rapide au ressenti + `docs/EXPLOITATION.md` §12.                                                       |
 
 ## 4. Déploiement pas à pas
 
@@ -153,7 +153,19 @@ _Administration → Postes de travail_ (ou `cli devices` / `cli approve-device <
    (jamais par ajustement) ou inventaire.
 7. Remettre l'**aide-mémoire** (`docs/manuels/PharmaStock-Aide-memoire-Preparateur.pdf`) à imprimer, et les manuels.
 
-**Étape 7 — Durcissement et exploitation (à proposer, avec accord)**
+**Étape 7 — Application Windows des postes de caisse (facultatif, à proposer)**
+Elle se construit **sur ce VPS Linux** (pas besoin de GitHub ni de Windows) :
+
+```bash
+# Node.js 22 + pnpm requis (sinon : curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt-get install -y nodejs && sudo corepack enable)
+bash migration/scripts/construire-application-windows.sh        # → apps/desktop/release/PharmaStock-X.Y.Z-win-x64.zip
+```
+
+Le propriétaire récupère le `.zip` (`scp`), le décompresse sur le PC de caisse et lance `PharmaStock.exe` ; au premier
+lancement il saisit l'adresse du serveur (`https://<domaine>`) et choisit l'imprimante (`docs/DESKTOP.md`). L'option
+`--installateur` (NSIS, mises à jour automatiques) demande Wine. Ne pas activer de CORS : l'application passe par un relais interne.
+
+**Étape 8 — Durcissement et exploitation (à proposer, avec accord)**
 
 - Vérifier `ufw status` (22, 80, 443 seulement) ; `fail2ban` actif ; mises à jour automatiques activées.
 - Limiter SSH (clé plutôt que mot de passe, `PermitRootLogin prohibit-password`) **seulement** si le propriétaire a déjà une clé qui fonctionne.

@@ -328,7 +328,7 @@ export const TOPICS_ADMIN: HelpTopic[] = [
     summary:
       'Une application Windows (installateur .exe) ouvre le site dans sa propre fenêtre et ajoute ce que le navigateur ne peut pas faire : impression silencieuse des tickets, ouverture du tiroir-caisse, jeton du poste chiffré par Windows, mises à jour proposées à la fermeture.',
     steps: [
-      'Lancez l’installateur PharmaStock-Setup-X.Y.Z.exe fourni par votre installateur : l’installation se fait pour l’utilisateur courant, sans droits d’administrateur, avec un raccourci sur le bureau.',
+      'Décompressez le fichier PharmaStock-X.Y.Z-win-x64.zip fourni par votre installateur dans un dossier durable (par exemple C:\\PharmaStock), puis lancez PharmaStock.exe et créez un raccourci sur le bureau (clic droit → Envoyer vers → Bureau). Une version avec installateur (PharmaStock-Setup-X.Y.Z.exe) existe aussi.',
       'Au premier lancement, la fenêtre « Réglages du poste » s’ouvre : saisissez l’adresse du serveur (la même que dans le navigateur) et choisissez l’imprimante des tickets 80 mm et celle des factures A4.',
       'Touchez « Ticket de test » puis « Ouvrir le tiroir » pour vérifier l’imprimante et le tiroir-caisse, puis « Enregistrer ».',
       'Nommez le poste (le nom de l’ordinateur est proposé) et connectez-vous. Un administrateur l’approuve dans Administration → Postes de travail.',
@@ -336,7 +336,7 @@ export const TOPICS_ADMIN: HelpTopic[] = [
     tips: [
       'Les réglages se rouvrent avec le menu du profil → « Réglages du poste » ou Ctrl+, (menu Poste).',
       'F11 bascule en plein écran ; l’option « Démarrer en plein écran » et le lancement avec Windows se cochent dans les réglages.',
-      'Les mises à jour sont proposées à la fermeture de l’application : jamais au milieu d’une vente.',
+      'Mise à jour : décompressez le nouveau fichier .zip par-dessus l’ancien dossier (application fermée) ; vos réglages sont conservés. La version avec installateur propose les mises à jour à la fermeture, jamais au milieu d’une vente.',
       'L’application Windows et le navigateur se partagent le même serveur, les mêmes comptes et les mêmes données : vous pouvez les utiliser en même temps sur des postes différents.',
     ],
     warnings: [
