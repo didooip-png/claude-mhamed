@@ -326,18 +326,23 @@ export const TOPICS_ADMIN: HelpTopic[] = [
     routes: [],
     roles: [...ADMIN],
     summary:
-      'Une application Windows (installateur .exe) ouvre le site dans sa propre fenêtre et ajoute ce que le navigateur ne peut pas faire : impression silencieuse des tickets, ouverture du tiroir-caisse, démarrage automatique.',
+      'Une application Windows (installateur .exe) ouvre le site dans sa propre fenêtre et ajoute ce que le navigateur ne peut pas faire : impression silencieuse des tickets, ouverture du tiroir-caisse, jeton du poste chiffré par Windows, mises à jour proposées à la fermeture.',
     steps: [
-      'Téléchargez l’installateur PharmaStock-Setup.exe fourni par votre installateur.',
-      'Lancez-le : l’installation se fait pour l’utilisateur courant, sans droits d’administrateur.',
-      'Au premier lancement, saisissez l’adresse du serveur, puis nommez le poste.',
-      'Approuvez le poste dans Administration → Postes de travail.',
-      'Choisissez l’imprimante de tickets dans les réglages de l’application.',
+      'Lancez l’installateur PharmaStock-Setup-X.Y.Z.exe fourni par votre installateur : l’installation se fait pour l’utilisateur courant, sans droits d’administrateur, avec un raccourci sur le bureau.',
+      'Au premier lancement, la fenêtre « Réglages du poste » s’ouvre : saisissez l’adresse du serveur (la même que dans le navigateur) et choisissez l’imprimante des tickets 80 mm et celle des factures A4.',
+      'Touchez « Ticket de test » puis « Ouvrir le tiroir » pour vérifier l’imprimante et le tiroir-caisse, puis « Enregistrer ».',
+      'Nommez le poste (le nom de l’ordinateur est proposé) et connectez-vous. Un administrateur l’approuve dans Administration → Postes de travail.',
     ],
     tips: [
-      'Les mises à jour sont proposées à la fermeture : jamais au milieu d’une vente.',
-      'Vous pouvez utiliser l’application Windows et le navigateur en même temps sur des postes différents.',
+      'Les réglages se rouvrent avec le menu du profil → « Réglages du poste » ou Ctrl+, (menu Poste).',
+      'F11 bascule en plein écran ; l’option « Démarrer en plein écran » et le lancement avec Windows se cochent dans les réglages.',
+      'Les mises à jour sont proposées à la fermeture de l’application : jamais au milieu d’une vente.',
+      'L’application Windows et le navigateur se partagent le même serveur, les mêmes comptes et les mêmes données : vous pouvez les utiliser en même temps sur des postes différents.',
     ],
-    shot: 'install',
+    warnings: [
+      'Le tiroir-caisse doit être branché sur l’imprimante de tickets (prise RJ11/RJ12) : c’est elle qui reçoit l’impulsion d’ouverture.',
+    ],
+    shot: 'desktop-settings',
+    shotCaption: 'Réglages du poste (application Windows)',
   },
 ];

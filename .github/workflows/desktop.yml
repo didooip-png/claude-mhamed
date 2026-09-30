@@ -1,0 +1,56 @@
+name: Application Windows
+
+# Construit l'installateur (NSIS, x64) sur un exécuteur Windows : nécessaire pour embarquer les
+# composants natifs d'impression. Déclenché à la main ou par une étiquette « desktop-v* ».
+on:
+  workflow_dispatch:
+    inputs:
+      update_url:
+        description: 'Adresse du serveur de publication des mises à jour (vide = pas de mise à jour automatique)'
+        required: false
+        default: ''
+  push:
+    tags: ['desktop-v*']
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tests de l'application de bureau
+        run: |
+          pnpm --filter @pharmastock/desktop typecheck
+          pnpm --filter @pharmastock/desktop test
+      - name: Compilation (processus principal, préchargements, site local)
+        run: |
+          pnpm --filter @pharmastock/desktop build
+          pnpm --filter @pharmastock/desktop build:renderer
+      - name: Installateur
+        shell: bash
+        working-directory: apps/desktop
+        env:
+          # Signature de code : secrets facultatifs (certificat de la cliente). Sans eux, l'installateur n'est pas signé.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          UPDATE_URL: ${{ inputs.update_url || vars.DESKTOP_UPDATE_URL }}
+        run: |
+          if [ -n "$UPDATE_URL" ]; then
+            pnpm exec electron-builder --win --x64 --publish never -c.publish.provider=generic "-c.publish.url=$UPDATE_URL"
+          else
+            pnpm exec electron-builder --win --x64 --publish never
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PharmaStock-Windows
+          path: |
+            apps/desktop/release/PharmaStock-Setup-*.exe
+            apps/desktop/release/latest.yml
+            apps/desktop/release/*.blockmap
+          if-no-files-found: error

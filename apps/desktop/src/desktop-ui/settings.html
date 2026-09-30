@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Réglages du poste — PharmaStock</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Réglages du poste</h1>
+      <p id="intro" class="muted" hidden>
+        Bienvenue. Indiquez l’adresse du serveur PharmaStock de votre établissement, puis choisissez
+        l’imprimante de tickets. Ces réglages sont propres à cet ordinateur.
+      </p>
+      <form id="form" novalidate>
+        <label>
+          Adresse du serveur
+          <input
+            id="serverUrl"
+            type="text"
+            placeholder="https://pharmacie.exemple.tn"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span class="hint">Celle que vous tapez dans le navigateur pour ouvrir PharmaStock.</span>
+        </label>
+        <label>
+          Imprimante des tickets (80 mm) et du tiroir-caisse
+          <select id="ticketPrinter"></select>
+        </label>
+        <label>
+          Imprimante des factures A4
+          <select id="a4Printer"></select>
+        </label>
+        <div class="row">
+          <button type="button" id="testTicket">Ticket de test</button>
+          <button type="button" id="testA4">Page A4 de test</button>
+          <button type="button" id="testDrawer">Ouvrir le tiroir</button>
+        </div>
+        <label class="check"
+          ><input id="fullscreen" type="checkbox" /> Démarrer en plein écran</label
+        >
+        <label class="check"
+          ><input id="autoStart" type="checkbox" /> Lancer PharmaStock à l’ouverture de la session
+          Windows</label
+        >
+        <p id="message" role="status"></p>
+        <div class="row end">
+          <button type="button" id="cancel" class="secondary">Annuler</button>
+          <button type="submit" id="save">Enregistrer</button>
+        </div>
+        <p class="muted small">Version <span id="version"></span></p>
+      </form>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+body {
+  margin: 0;
+  background: #f6f8f9;
+  color: #17202a;
+}
+main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 24px 28px;
+}
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+input[type='text'],
+select {
+  font: inherit;
+  font-weight: 400;
+  padding: 8px 10px;
+  border: 1px solid #b8c2cc;
+  border-radius: 6px;
+  background: #fff;
+}
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid #0e7c6b;
+  outline-offset: 1px;
+}
+.hint,
+.muted {
+  font-weight: 400;
+  color: #5b6773;
+  font-size: 12px;
+}
+.small {
+  margin: 0;
+  text-align: right;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.row.end {
+  justify-content: flex-end;
+}
+button {
+  font: inherit;
+  padding: 8px 14px;
+  border: 1px solid #0e7c6b;
+  background: #0e7c6b;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button.secondary,
+.row button:not(#save) {
+  background: #fff;
+  color: #0e7c6b;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+#message {
+  min-height: 1.3em;
+  margin: 0;
+  font-size: 13px;
+}
+#message.error {
+  color: #b42318;
+}
+#message.ok {
+  color: #067647;
+}

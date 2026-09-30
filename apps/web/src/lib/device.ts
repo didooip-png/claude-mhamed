@@ -6,10 +6,13 @@ export interface StoredDevice {
 }
 
 const KEY = 'pharmastock.device';
+/** Application de bureau : le jeton du poste est chiffré par le système, pas laissé en clair. */
+const secureStore =
+  typeof window !== 'undefined' ? window.pharmastockDesktop?.deviceStore : undefined;
 
 export function getDevice(): StoredDevice | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = secureStore ? secureStore.load() : localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredDevice;
     return parsed.id && parsed.token ? parsed : null;
@@ -19,11 +22,13 @@ export function getDevice(): StoredDevice | null {
 }
 
 export function saveDevice(device: StoredDevice): void {
-  localStorage.setItem(KEY, JSON.stringify(device));
+  if (secureStore) secureStore.save(JSON.stringify(device));
+  else localStorage.setItem(KEY, JSON.stringify(device));
 }
 
 export function clearDevice(): void {
-  localStorage.removeItem(KEY);
+  if (secureStore) secureStore.clear();
+  else localStorage.removeItem(KEY);
 }
 
 export function suggestDeviceName(): string {

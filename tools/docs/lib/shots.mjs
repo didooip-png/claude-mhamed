@@ -140,16 +140,17 @@ export async function runShots({ scenes, only }) {
       const api = await Api.login(role, role === 'ADMIN' ? 'Bureau 2' : 'Réserve');
       let loggedIn = false;
       /** Contexte d'une scène : la page pilotée, l'API du rôle et l'enregistrement des captures. */
-      const makeCtx = (scene, target) => ({
+      const makeCtx = (scene, pageOfScene) => ({
         role,
-        page: target,
+        page: pageOfScene,
         api,
         goto: async (path, ready, extra) => {
-          await target.goto(WEB_URL + path);
-          if (ready) await ready(target);
-          await settle(target, extra);
+          await pageOfScene.goto(WEB_URL + path);
+          if (ready) await ready(pageOfScene);
+          await settle(pageOfScene, extra);
         },
         async shot(name = scene.id, opts = {}) {
+          const target = opts.page ?? pageOfScene;
           await unmark(target);
           if (opts.marks) await mark(target, opts.marks);
           const file = resolve(SHOTS_DIR, `${name}.${role}.jpg`);

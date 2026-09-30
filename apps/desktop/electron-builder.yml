@@ -1,0 +1,37 @@
+# Installateur Windows (NSIS, x64). Construit sur Windows (CI : .github/workflows/desktop.yml).
+appId: tn.pharmastock.desktop
+productName: PharmaStock
+copyright: PharmaStock
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - renderer/**
+  - package.json
+  - '!**/*.map'
+asar: true
+# SumatraPDF (impression silencieuse) est un exécutable : il doit rester hors de l'archive asar.
+asarUnpack:
+  - node_modules/pdf-to-printer/dist/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+  artifactName: PharmaStock-Setup-${version}.${ext}
+  # Signature de code : à activer avec le certificat de la cliente (variables CSC_LINK / CSC_KEY_PASSWORD).
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: PharmaStock
+  deleteAppDataOnUninstall: false
+  language: '1036'
+# Mises à jour automatiques : fournir l'adresse du serveur de publication au moment de la construction
+#   electron-builder --win -c.publish.provider=generic -c.publish.url=https://exemple.tn/pharmastock-desktop
+# Sans adresse, l'application ne cherche pas de mise à jour.
+publish: null

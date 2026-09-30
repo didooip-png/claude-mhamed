@@ -5,3 +5,9 @@ apps/api/src/generated
 apps/api/prisma/migrations
 CAHIER_DES_CHARGES_CLAUDE_CODE.md
 docs/SPEC.md
+apps/desktop/renderer
+apps/desktop/release
+tools/docs/.cache
+apps/web/public/manuels
+docs/manuels
+migration-out

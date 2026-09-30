@@ -29,6 +29,8 @@ pnpm db:seed                               # données de démonstration (dev / r
 pnpm dev                                   # shared (watch) + API :3000 + web :5173
 pnpm lint && pnpm typecheck && pnpm test
 pnpm --filter @pharmastock/api cli setup   # première installation (production)
+pnpm docs:build                            # manuels PDF, mémo, FAQ (captures automatiques, base pharmastock_docs)
+pnpm --filter @pharmastock/desktop smoke   # application Windows : vérification de bout en bout (xvfb-run -a sous Linux)
 ```
 
 Comptes de démonstration (seed) : `admin` / `Admin2026` (ADM01, PIN 1234), `pre01` / `Prep2026`
@@ -87,6 +89,20 @@ Comptes de démonstration (seed) : `admin` / `Admin2026` (ADM01, PIN 1234), `pre
 - Shell : ne jamais `pkill -f` un motif qui figure dans sa propre ligne de commande (le shell se tue) ;
   arrêter l'API par son fichier PID (`restart-api.sh`).
 
+- Aide et documentation : **une seule source** — `packages/shared/src/help` (fiches par écran et par rôle, FAQ,
+  mémo, visite guidée). Toute nouvelle page ou action visible ajoute/adapte sa fiche (`routes`, `steps`, libellés
+  exacts de l'interface) et sa scène de capture dans `tools/docs/lib/scenes.mjs`, puis `pnpm docs:build` régénère
+  `docs/manuels/` (PDF versionnés, copiés dans `apps/web/public/manuels/`). Un champ difficile reçoit
+  `FormField help="…"`. Le libellé du bouton « ? » d'un champ reste « Aide sur ce champ » (pas le nom du champ).
+- Visite guidée : cibles `data-tour="…"` (menu, recherche, cloche, profil, aide) ; `localStorage
+pharmastock.tour.disabled=1` la coupe (tests E2E, captures). Elle est déjà posée dans `e2e/support/ui.ts`.
+- Application de bureau (`apps/desktop`, `docs/DESKTOP.md`) : le site local (`app://pharmastock`) appelle `/api/…`,
+  relayé par le processus principal (cookie de renouvellement géré là, `SameSite=Strict` oblige). Toute nouvelle
+  fonction du pont `window.pharmastockDesktop` se déclare dans `src/preload.ts`, `src/main.ts` (contrôle
+  `trusted(event)`) et `apps/web/src/lib/platform.ts`. Vérifier avec `pnpm --filter @pharmastock/desktop smoke`.
+- Installation PWA / téléphone : composants `useIsMobile`, `install.ts` ; un débordement horizontal se corrige avec
+  `min-w-0` (règle `.grid > *` déjà en base), jamais avec `overflow-x: hidden` sur la page.
+
 ## Conventions
 
 - Code, tables, routes en anglais ; interface, messages, documents en français.
@@ -108,5 +124,7 @@ apps/api/test/              tests d'intégration (TestContext : app Nest + super
 apps/web/src/components/    ui/ (primitives), layout/ (coquille, navigation), data-table, form
 apps/web/src/lib/           api (fetch + renouvellement), auth, device, platform (§14), format
 apps/web/src/pages/         écrans par domaine
-packages/shared/src/        code partagé API / web
+apps/desktop/               application Windows (Electron) : src/ (principal, préchargements, réglages), scripts/, test/
+tools/docs/                 générateur des manuels PDF (captures Playwright + PDF), lancé par `pnpm docs:build`
+packages/shared/src/        code partagé API / web (help/ : contenu d'aide, FAQ, mémo, visite guidée)
 ```

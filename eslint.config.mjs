@@ -15,6 +15,9 @@ export default tseslint.config(
       '**/*.config.*',
       '**/dev-dist/**',
       'playwright-report/**',
+      'apps/desktop/renderer/**',
+      'apps/desktop/release/**',
+      'tools/docs/.cache/**',
       'test-results/**',
     ],
   },
@@ -38,11 +41,18 @@ export default tseslint.config(
   },
   {
     // Les scènes de capture exécutent du code dans la page (page.evaluate) : globales du navigateur.
-    files: ['tools/**'],
+    files: ['tools/**', 'apps/desktop/scripts/**'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
-    files: ['apps/api/src/cli.ts', 'apps/api/prisma/**', 'e2e/**', 'scripts/**', 'tools/**'],
+    files: [
+      'apps/api/src/cli.ts',
+      'apps/api/prisma/**',
+      'e2e/**',
+      'scripts/**',
+      'tools/**',
+      'apps/desktop/scripts/**',
+    ],
     rules: { 'no-console': 'off' },
   },
   {
@@ -50,6 +60,11 @@ export default tseslint.config(
     // les imports de classes injectées doivent rester des imports de valeur.
     files: ['apps/api/src/**/*.ts', 'apps/api/test/**/*.ts', 'apps/api/prisma/**/*.ts'],
     rules: { '@typescript-eslint/consistent-type-imports': 'off' },
+  },
+  {
+    // Écran des réglages du poste : script du navigateur embarqué.
+    files: ['apps/desktop/src/desktop-ui/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
   },
   {
     files: ['apps/web/src/**/*.{ts,tsx}'],

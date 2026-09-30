@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { api, ApiError, errorText } from '@/lib/api';
 import { useAuth, type Me } from '@/lib/auth';
 import { suggestDeviceName } from '@/lib/device';
+import { platform } from '@/lib/platform';
 
 function AuthLayout({
   children,
@@ -45,6 +46,10 @@ function AuthLayout({
 export function RegisterDevicePage() {
   const { registerDevice } = useAuth();
   const [name, setName] = React.useState(suggestDeviceName());
+  // Application de bureau : le nom de l'ordinateur est un bon nom de poste par défaut.
+  React.useEffect(() => {
+    if (platform.isDesktop) void platform.getDeviceInfo().then((info) => setName(info.hostname));
+  }, []);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   return (

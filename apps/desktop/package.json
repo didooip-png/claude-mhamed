@@ -2,7 +2,7 @@
   "name": "@pharmastock/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "PharmaStock \u2014 application Windows (Electron) : impression silencieuse, tiroir-caisse, mises \u00e0 jour",
+  "description": "PharmaStock — application Windows (Electron) : impression silencieuse, tiroir-caisse, mises à jour",
   "author": "PharmaStock",
   "main": "dist/main.cjs",
   "scripts": {
@@ -11,7 +11,8 @@
     "start": "pnpm build && pnpm build:renderer && electron .",
     "dist": "pnpm build && pnpm build:renderer && electron-builder --win --x64 --publish never",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",

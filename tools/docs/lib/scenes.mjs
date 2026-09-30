@@ -5,7 +5,13 @@
  * L'ordre compte : la passe « préparateur » ouvre la caisse et prépare les données que
  * les écrans suivants affichent.
  */
-import { SMTP_SINK_PORT } from './env.mjs';
+import { _electron } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { API_PORT, ROOT, SMTP_SINK_PORT } from './env.mjs';
 import { settle } from './shots.mjs';
 
 const P = ['PREPARER'];
@@ -51,6 +57,17 @@ async function ensureSmtp(c) {
   });
   await c.api.post('/email/smtp/test-connection').catch(() => {});
 }
+
+const electronBinary = (desktopDir) =>
+  resolve(
+    desktopDir,
+    'node_modules/electron/dist',
+    process.platform === 'win32'
+      ? 'electron.exe'
+      : process.platform === 'darwin'
+        ? 'Electron.app/Contents/MacOS/Electron'
+        : 'electron',
+  );
 
 export function buildScenes(base) {
   return [
@@ -828,6 +845,58 @@ export function buildScenes(base) {
       run: async (c) => {
         await c.goto('/help', (p) => p.getByRole('heading', { name: 'Aide' }).waitFor());
         await c.shot('help');
+      },
+    },
+    {
+      id: 'desktop-settings',
+      roles: A,
+      standalone: true,
+      run: async (c) => {
+        // La vraie application Electron (build local + relais d'API) : sous Linux sans écran, lancer via xvfb-run.
+        if (process.platform === 'linux' && !process.env.DISPLAY)
+          throw new Error(
+            'Aucun écran (DISPLAY) : lancez « xvfb-run -a pnpm docs:build » pour cette capture',
+          );
+        const desktopDir = resolve(ROOT, 'apps/desktop');
+        if (
+          !existsSync(resolve(desktopDir, 'dist/main.cjs')) ||
+          !existsSync(resolve(desktopDir, 'renderer/index.html'))
+        ) {
+          execFileSync('pnpm', ['--filter', '@pharmastock/desktop', 'build'], {
+            cwd: ROOT,
+            stdio: 'inherit',
+          });
+          execFileSync('pnpm', ['--filter', '@pharmastock/desktop', 'build:renderer'], {
+            cwd: ROOT,
+            stdio: 'inherit',
+          });
+        }
+        const userData = await mkdtemp(resolve(tmpdir(), 'pharmastock-docs-'));
+        const app = await _electron.launch({
+          executablePath: electronBinary(desktopDir),
+          args: ['--no-sandbox', '--disable-gpu', `--user-data-dir=${userData}`, desktopDir],
+          env: { ...process.env, PHARMASTOCK_SERVER_URL: `http://127.0.0.1:${API_PORT}` },
+        });
+        try {
+          const main = await app.firstWindow();
+          await main
+            .getByRole('heading', { name: 'Enregistrer ce poste' })
+            .waitFor({ timeout: 30_000 });
+          await main.evaluate(() => window.pharmastockDesktop.openSettings());
+          let win;
+          for (let i = 0; i < 40 && !win; i++) {
+            win = app.windows().find((w) => w.url().includes('__desktop'));
+            if (!win) await new Promise((r) => setTimeout(r, 250));
+          }
+          if (!win) throw new Error('Fenêtre des réglages introuvable');
+          await win.waitForLoadState();
+          await win.locator('#serverUrl').fill('https://pharmacie.exemple.tn');
+          await win.waitForTimeout(400);
+          await c.shot('desktop-settings', { page: win });
+        } finally {
+          await app.close();
+          await rm(userData, { recursive: true, force: true });
+        }
       },
     },
     {

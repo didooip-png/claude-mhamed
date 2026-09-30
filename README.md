@@ -4,15 +4,18 @@ Logiciel de gestion de stock de médicaments (pharmacie / dépôt pharmaceutique
 ventes au comptoir, clients et comptes, règlements, retours et avoirs, caisse, inventaires, commandes fournisseurs,
 mouchard infalsifiable, statistiques et rapports, e-mails, sauvegardes.
 
-| Document                                                                          | Contenu                                                                                      |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [`docs/GUIDE_UTILISATEUR.md`](docs/GUIDE_UTILISATEUR.md)                          | Mode d'emploi pour l'équipe (préparateurs, administrateur), avec captures d'écran            |
-| [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md)                                    | Installation Docker, HTTPS, mises à jour, sauvegardes et restauration, supervision, sécurité |
-| [`docs/SPEC.md`](docs/SPEC.md)                                                    | Cahier des charges                                                                           |
-| [`docs/PROGRESS.md`](docs/PROGRESS.md) · [`docs/DECISIONS.md`](docs/DECISIONS.md) | Avancement par phase · décisions d'architecture et de gestion                                |
+| Document                                                                          | Contenu                                                                                                           |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [`docs/GUIDE_UTILISATEUR.md`](docs/GUIDE_UTILISATEUR.md)                          | Mode d'emploi pour l'équipe (préparateurs, administrateur), avec captures d'écran                                 |
+| [`docs/manuels/`](docs/manuels)                                                   | Manuels PDF (Administrateur, Préparateur), aide-mémoire d'une page, FAQ « Que faire si… » — captures automatiques |
+| [`docs/DESKTOP.md`](docs/DESKTOP.md)                                              | Application Windows (impression silencieuse, tiroir-caisse, mises à jour)                                         |
+| [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md)                                    | Installation Docker, HTTPS, mises à jour, sauvegardes et restauration, supervision, sécurité                      |
+| [`docs/SPEC.md`](docs/SPEC.md)                                                    | Cahier des charges                                                                                                |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) · [`docs/DECISIONS.md`](docs/DECISIONS.md) | Avancement par phase · décisions d'architecture et de gestion                                                     |
 
-- **Étape 1** (terminée, en recette) : application web (navigateur, installable en PWA).
-- **Étape 2** (à venir) : logiciel de bureau Windows (Electron) utilisant la même API et la même base.
+- **Application web** (navigateur, installable sur téléphone et ordinateur sans magasin d'applications), avec aide
+  intégrée (bouton « ? », visite guidée, FAQ) et affichage optimisé pour téléphone.
+- **Application Windows** (`apps/desktop`, Electron) utilisant la même API et la même base : voir `docs/DESKTOP.md`.
 
 ## Déploiement en production
 

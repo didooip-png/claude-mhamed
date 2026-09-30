@@ -201,4 +201,27 @@ retours et annulations réels (`test/reports.test.ts`, 8 tests), commandes et r�
 exécuté sur une vraie base : première installation, mise à jour avec sauvegarde préalable, base à jour), sauvegarde
 restaurable, mesures de charge, 7 scénarios E2E verts.
 
-## Phase 7 — Logiciel de bureau (après validation de la cliente) ⏳
+## Phase 7 — Mobile, aide intégrée, manuels, application de bureau ✅
+
+- **Installation sans magasin d'applications (PWA)** : bouton « Installer » en haut à droite (Android/Chrome : fenêtre
+  native ; iPhone/iPad : pas à pas « Partager → Sur l'écran d'accueil » ; ordinateur), manifeste complet et icônes
+  (maskable, Apple), bandeau d'invitation, écran de connexion compris. Installabilité vérifiée par le protocole de
+  débogage (`Page.getInstallabilityErrors`).
+- **Affichage téléphone** : navigation basse + menu, tableaux en cartes (« Filtres et tri »), dialogues en feuille
+  montante, zones tactiles ≥ 40 px et saisies 16 px (pas de zoom iOS), zones sûres (encoche), lecteur de code-barres par
+  la caméra (Android), caisse (POS) en cartes avec barre de paiement fixe. Contrôlé sur ~25 écrans (aucun défilement
+  horizontal).
+- **Aide intégrée** : bouton « ? » sur chaque écran (panneau de la fiche de l'écran, F1), bulles d'aide sur les champs
+  difficiles (`FormField help`), **visite guidée** au premier lancement (par utilisateur, relançable), page **Aide**
+  (FAQ « Que faire si… » avec recherche, guide par écran, raccourcis, fiche mémo imprimable, manuels PDF). Une seule
+  source de contenu : `packages/shared/src/help` (fiches par rôle, FAQ, mémo, visite), testée (`help.test.ts`).
+- **Manuels PDF** (`pnpm docs:build`, `tools/docs`) : manuel **Administrateur** (14 chapitres, 59 fiches), manuel
+  **Préparateur** (11 chapitres, 41 fiches), **aide-mémoire A4 d'une page**, **FAQ**. Captures **prises automatiquement**
+  sur le vrai site avec les données de démonstration (pastilles numérotées = étapes), sommaire paginé, pieds de page.
+  Versionnés dans `docs/manuels/` et servis par le site (`/manuels/…`).
+- **Application de bureau Windows** (`apps/desktop`, `docs/DESKTOP.md`) : build local du site (`app://pharmastock`), relais
+  d'API par le processus principal, isolation stricte, impression silencieuse, tiroir-caisse ESC/POS, jeton du poste
+  chiffré (safeStorage), réglages du poste (serveur, imprimantes, plein écran, démarrage avec Windows), instance
+  unique, mises à jour proposées à la fermeture, installateur NSIS x64 construit par GitHub Actions. Vérifiée en
+  réel sous Linux/Xvfb (`pnpm --filter @pharmastock/desktop smoke`) ; **à valider sur le matériel** (imprimante, tiroir).
+- **Exploitation** : commande `cli reset-credentials <CODE>` (secours si l'unique administrateur perd son mot de passe).

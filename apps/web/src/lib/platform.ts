@@ -9,9 +9,14 @@ export interface PrintOptions {
 }
 
 interface DesktopBridge {
+  version: string;
   print(pdf: ArrayBuffer, options: PrintOptions): Promise<void>;
   openCashDrawer(): Promise<void>;
   getDeviceInfo(): Promise<{ hostname: string; platform: string }>;
+  /** Fenêtre « Réglages du poste » (serveur, imprimantes). */
+  openSettings(): Promise<void>;
+  /** Identité du poste : chiffrée par le système (safeStorage) plutôt que laissée dans le stockage web. */
+  deviceStore: { load(): string | null; save(json: string): void; clear(): void };
 }
 
 declare global {
@@ -81,6 +86,15 @@ export const platform = {
     if (!desktop) return false;
     await desktop.openCashDrawer();
     return true;
+  },
+
+  /** Réglages propres au poste (application de bureau uniquement). */
+  async openSettings(): Promise<void> {
+    await desktop?.openSettings();
+  },
+
+  get desktopVersion(): string | null {
+    return desktop?.version ?? null;
   },
 
   async getDeviceInfo(): Promise<{ hostname: string; platform: string }> {

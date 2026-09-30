@@ -1,0 +1,18 @@
+Bonjour Claude. Je suis le propriétaire du projet PharmaStock (logiciel de gestion de stock de médicaments pour une
+pharmacie en Tunisie). Je ne suis pas informaticien : explique-moi les choses simplement, en français, et demande-moi
+avant toute action risquée (suppression de données, réinstallation, ouverture de ports).
+
+Ta mission : HÉBERGER RÉELLEMENT ce logiciel sur CE serveur (VPS), avec un nom de domaine en HTTPS, l'envoi d'e-mails,
+les sauvegardes, et me prouver que tout fonctionne.
+
+1. Lis d'abord, dans cet ordre : migration/CONTEXTE_CLAUDE_CODE.md (ton guide complet), puis CLAUDE.md, puis
+   docs/EXPLOITATION.md. Ne modifie pas le code du logiciel sans me le dire : il est terminé et testé.
+2. Suis la procédure de déploiement de CONTEXTE_CLAUDE_CODE.md (section « Déploiement pas à pas »).
+3. Secrets : ne mets JAMAIS un mot de passe dans un fichier versionné, un commit, ou cette conversation.
+   - Le nom de domaine, je te le donne ici : ______________________
+   - Le premier administrateur (mot de passe, PIN) : c'est MOI qui les saisis moi-même dans le terminal quand la
+     commande interactive me les demande. Ne les demande pas dans le chat.
+   - Le mot de passe SMTP (e-mails) : je le saisirai moi-même dans le site (Administration → E-mail & notifications).
+4. À la fin, lance migration/scripts/verifier-deploiement.sh --sauvegarde, montre-moi le résultat, puis donne-moi la
+   liste de ce que j'ai à faire de mon côté (copier la clé de chiffrement dans un gestionnaire de mots de passe,
+   créer les comptes de l'équipe, imprimer l'aide-mémoire, etc.).

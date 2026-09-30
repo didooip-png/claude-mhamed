@@ -280,3 +280,15 @@ Réservé à l'administrateur (menu **Administration**).
 **L'écart de caisse est apparu à la clôture.** Il est calculé par le serveur et transmis à l'administrateur. Ne recommencez pas la clôture : signalez l'incident ; l'administrateur peut retracer chaque mouvement de la session.
 
 **Une alerte « Incohérence de stock » est arrivée.** Prévenez l'administrateur. Ne corrigez pas au hasard : ouvrez la fiche de mouvement du lot concerné pour comprendre, puis faites un ajustement motivé.
+
+## Aide, manuels et application
+
+- **Bouton « ? »** en haut de chaque écran (ou touche **F1**) : explique l'écran où vous êtes, pas à pas. La **page Aide**
+  (menu _Aide_) rassemble la FAQ « Que faire si… », le guide par écran, les raccourcis et la fiche mémo.
+- **Visite guidée** au premier lancement ; elle se relance depuis le bouton « ? » ou la page Aide.
+- **Manuels PDF** (Administrateur, Préparateur), **aide-mémoire d'une page** à imprimer et **FAQ** : page _Aide → Manuels PDF_
+  (fichiers dans `docs/manuels/`).
+- **Sur téléphone** : ouvrez le site dans Chrome (Android) ou Safari (iPhone) et touchez **Installer** en haut à droite :
+  l'icône s'ajoute à l'écran d'accueil, sans passer par un magasin d'applications.
+- **Sur le poste de caisse Windows** : l'application PharmaStock imprime les tickets sans boîte de dialogue et ouvre le
+  tiroir-caisse (`docs/DESKTOP.md`).

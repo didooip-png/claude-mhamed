@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   Monitor,
+  Printer,
   Moon,
   Receipt,
   Search,
@@ -48,6 +49,7 @@ import { cn } from '@/lib/utils';
 import { GuidedTour } from '@/components/help/guided-tour';
 import { HelpButton } from '@/components/help/help-panel';
 import { InstallBanner, InstallButton } from '@/components/install-button';
+import { platform } from '@/lib/platform';
 import { OverrideDialogHost } from '@/components/override-dialog';
 import { NotificationBell } from '@/pages/notifications/notifications';
 import { AVAILABLE_ROUTES, NAV, type NavItem } from './nav';
@@ -520,6 +522,11 @@ export function AppShell() {
                   <DropdownMenuItem onSelect={() => void navigate('/account')}>
                     <UserRound /> Mon compte
                   </DropdownMenuItem>
+                  {platform.isDesktop && (
+                    <DropdownMenuItem onSelect={() => void platform.openSettings()}>
+                      <Printer /> Réglages du poste
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onSelect={() => setSwitchOpen(true)}>
                     <Users /> Changer d’utilisateur (PIN)
                   </DropdownMenuItem>

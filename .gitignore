@@ -18,3 +18,4 @@ apps/api/storage-test/
 apps/api/storage-e2e/
 tools/docs/.cache/
 apps/api/storage-docs/
+/migration-out/
