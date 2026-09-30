@@ -29,22 +29,22 @@ Au premier lancement, le site demande un **nom de poste** (ex. « Comptoir 1 »)
 
 ### Comptes de démonstration (développement / recette uniquement)
 
-| Code | Identifiant | Mot de passe | PIN | Rôle |
-|---|---|---|---|---|
-| ADM01 | `admin` | `Admin2026` | 1234 | Administrateur |
-| PRE01 | `pre01` | `Prep2026` | 1111 | Préparateur |
-| PRE02 | `pre02` | `Prep2026` | 2222 | Préparateur |
+| Code  | Identifiant | Mot de passe | PIN  | Rôle           |
+| ----- | ----------- | ------------ | ---- | -------------- |
+| ADM01 | `admin`     | `Admin2026`  | 1234 | Administrateur |
+| PRE01 | `pre01`     | `Prep2026`   | 1111 | Préparateur    |
+| PRE02 | `pre02`     | `Prep2026`   | 2222 | Préparateur    |
 
 Ces comptes n'existent **jamais** en production : la première installation se fait avec `pnpm --filter @pharmastock/api cli setup`.
 
 ## Commandes
 
-| Commande | Rôle |
-|---|---|
-| `pnpm dev` | Paquet partagé (watch) + API + site |
-| `pnpm lint` / `pnpm format` | ESLint / Prettier |
-| `pnpm typecheck` | Vérification des types de tout le monorepo |
-| `pnpm test` | Tests unitaires et d'intégration (base `pharmastock_test`) |
-| `pnpm build` | Build de production |
-| `pnpm db:seed` | Données de démonstration |
+| Commande                                        | Rôle                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `pnpm dev`                                      | Paquet partagé (watch) + API + site                                             |
+| `pnpm lint` / `pnpm format`                     | ESLint / Prettier                                                               |
+| `pnpm typecheck`                                | Vérification des types de tout le monorepo                                      |
+| `pnpm test`                                     | Tests unitaires et d'intégration (base `pharmastock_test`)                      |
+| `pnpm build`                                    | Build de production                                                             |
+| `pnpm db:seed`                                  | Données de démonstration                                                        |
 | `pnpm --filter @pharmastock/api cli <commande>` | `setup`, `devices`, `approve-device <id>`, `unlock-user <code>`, `verify-audit` |

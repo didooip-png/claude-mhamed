@@ -70,10 +70,10 @@ describe('allocateProportionally', () => {
 
 describe('formatage et saisie', () => {
   it('formate 1 234,567 DT', () => {
-    expect(formatMoney(1_234_567)).toBe('1 234,567 DT');
-    expect(formatMoney(-500)).toBe('−0,500 DT');
+    expect(formatMoney(1_234_567)).toBe('1\u202f234,567\u202fDT');
+    expect(formatMoney(-500)).toBe('−0,500\u202fDT');
     expect(formatMoney(5, { currency: '' })).toBe('0,005');
-    expect(formatMoney(1_234_567, { decimals: 2, currency: '' })).toBe('1 234,57');
+    expect(formatMoney(1_234_567, { decimals: 2, currency: '' })).toBe('1\u202f234,57');
   });
   it('lit les saisies utilisateur', () => {
     expect(parseMoney('1 234,5')).toBe(1_234_500);

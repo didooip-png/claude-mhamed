@@ -4,7 +4,7 @@ export function normalizeSearch(...parts: (string | null | undefined)[]): string
     .filter((p): p is string => !!p)
     .join(' ')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9%.,/+-]+/g, ' ')
     .replace(/\s+/g, ' ')

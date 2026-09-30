@@ -158,6 +158,16 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/admin/devices',
   '/admin/sessions',
   '/admin/settings',
+  '/products',
+  '/catalog/references',
+  '/suppliers',
+  '/clients',
+  '/receipts',
+  '/stock',
+  '/stock/lots',
+  '/stock/expiries',
+  '/stock/movements',
+  '/stock/at-date',
 ]);
 
 export const ACTIVITY_ICON = Activity;

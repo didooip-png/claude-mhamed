@@ -8,11 +8,30 @@ import { OverrideAuditInterceptor } from './common/override-audit.interceptor.js
 import { RequestContext } from './common/request-context.js';
 import { SecurityGuard } from './common/security.guard.js';
 import { loadConfig } from './config.js';
+import { AttachmentsController } from './modules/attachments/attachments.controller.js';
+import { AttachmentsService } from './modules/attachments/attachments.service.js';
 import { AuditController } from './modules/audit/audit.controller.js';
+import { CatalogImportService } from './modules/catalog/catalog-import.service.js';
+import {
+  CatalogReferencesController,
+  ProductsController,
+} from './modules/catalog/catalog.controller.js';
+import { ProductsService } from './modules/catalog/products.service.js';
+import { ReferencesService } from './modules/catalog/references.service.js';
+import { ClientsController } from './modules/clients/clients.controller.js';
+import { ClientsService } from './modules/clients/clients.service.js';
+import { ReceiptsController } from './modules/receipts/receipts.controller.js';
+import { ReceiptsService } from './modules/receipts/receipts.service.js';
+import { StockQueriesService } from './modules/stock/stock-queries.service.js';
+import { StockController } from './modules/stock/stock.controller.js';
+import { StockService } from './modules/stock/stock.service.js';
+import { SuppliersController } from './modules/suppliers/suppliers.controller.js';
+import { SuppliersService } from './modules/suppliers/suppliers.service.js';
 import { AuthController } from './modules/auth/auth.controller.js';
 import { CoreModule } from './modules/core.module.js';
 import { DevicesController } from './modules/devices/devices.controller.js';
 import { EventsModule } from './modules/events/events.module.js';
+import { ExcelService } from './modules/exports/excel.service.js';
 import { HealthController } from './modules/health/health.controller.js';
 import { RolesController } from './modules/roles/roles.controller.js';
 import { RolesService } from './modules/roles/roles.service.js';
@@ -70,10 +89,27 @@ const config = loadConfig();
     RolesController,
     SettingsController,
     AuditController,
+    AttachmentsController,
+    ProductsController,
+    CatalogReferencesController,
+    SuppliersController,
+    ClientsController,
+    ReceiptsController,
+    StockController,
   ],
   providers: [
     UsersService,
     RolesService,
+    AttachmentsService,
+    ExcelService,
+    StockService,
+    StockQueriesService,
+    ProductsService,
+    ReferencesService,
+    CatalogImportService,
+    SuppliersService,
+    ClientsService,
+    ReceiptsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SecurityGuard },
     { provide: APP_INTERCEPTOR, useClass: OverrideAuditInterceptor },
