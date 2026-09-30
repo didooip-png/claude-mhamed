@@ -186,6 +186,15 @@ export const INVENTORY_STATUSES = labels({
   CANCELLED: 'Annulé',
 });
 
+export const PURCHASE_ORDER_STATUSES = labels({
+  DRAFT: 'Brouillon',
+  SENT: 'Envoyée au fournisseur',
+  PARTIALLY_RECEIVED: 'Partiellement reçue',
+  RECEIVED: 'Reçue',
+  CANCELLED: 'Annulée',
+});
+export type PurchaseOrderStatus = keyof typeof PURCHASE_ORDER_STATUSES;
+
 export const SUPPLIER_RETURN_STATUSES = labels({
   PENDING_CREDIT: 'En attente d’avoir fournisseur',
   CREDIT_RECEIVED: 'Avoir reçu',
@@ -207,6 +216,7 @@ export const DOCUMENT_TYPES = labels({
   REC: 'Réception',
   RT: 'Retour client',
   RF: 'Retour fournisseur',
+  BC: 'Bon de commande',
   INV: 'Inventaire',
   AJ: 'Ajustement',
   CS: 'Session de caisse',

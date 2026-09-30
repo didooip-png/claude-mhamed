@@ -241,6 +241,8 @@ export const receiptSchema = z
     receivedAt: isoDateSchema,
     notes: optional(1000),
     attachmentId: idSchema.nullish(),
+    /** Commande fournisseur à laquelle la réception est rattachée (contrôle des quantités). */
+    purchaseOrderId: idSchema.nullish(),
     lines: z.array(receiptLineSchema).max(500),
     version: z.number().int().optional(),
   })

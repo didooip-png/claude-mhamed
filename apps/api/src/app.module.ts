@@ -60,6 +60,8 @@ import { SalesController } from './modules/sales/sales.controller.js';
 import { SalesService } from './modules/sales/sales.service.js';
 import { DashboardController } from './modules/reports/dashboard.controller.js';
 import { DashboardService } from './modules/reports/dashboard.service.js';
+import { PurchaseOrdersController } from './modules/purchase-orders/purchase-orders.controller.js';
+import { PurchaseOrdersService } from './modules/purchase-orders/purchase-orders.service.js';
 import { FinanceReportsService } from './modules/reports/finance-reports.service.js';
 import { JournalsReportsService } from './modules/reports/journals-reports.service.js';
 import { ReportExportService } from './modules/reports/report-export.service.js';
@@ -154,6 +156,7 @@ const config = loadConfig();
     JobsController,
     ReportsController,
     DashboardController,
+    PurchaseOrdersController,
   ],
   providers: [
     UsersService,
@@ -190,6 +193,7 @@ const config = loadConfig();
     DigestService,
     JobsService,
     ReportsService,
+    PurchaseOrdersService,
     DashboardService,
     SalesReportsService,
     StockReportsService,

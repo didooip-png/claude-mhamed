@@ -61,6 +61,8 @@ export const ERROR_MESSAGES = {
   INVENTORY_EMPTY: 'Aucun lot ne correspond à ce périmètre d’inventaire.',
   LOT_NOT_EXPIRED: 'Seuls les lots périmés, bloqués ou en quarantaine peuvent être détruits.',
   LOT_SUPPLIER_MISMATCH: 'Ce lot n’a pas été fourni par ce fournisseur.',
+  ORDER_NOT_DRAFT: 'Cette commande n’est plus modifiable.',
+  ORDER_NOT_RECEIVABLE: 'Cette commande n’attend pas de réception.',
   SUPPLIER_RETURN_NOT_PENDING: 'Ce retour fournisseur n’est plus en attente d’avoir.',
   // Ventes
   CLIENT_REQUIRED: 'L’acheteur est obligatoire : sélectionnez ou créez un client.',

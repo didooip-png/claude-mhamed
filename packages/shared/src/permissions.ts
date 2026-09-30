@@ -166,6 +166,11 @@ const definitions = {
     preparer: false,
   },
   'supplier_returns.manage': { module: 'stock', label: 'Retours fournisseurs', preparer: false },
+  'orders.manage': {
+    module: 'stock',
+    label: 'Commandes fournisseurs (création, envoi, clôture)',
+    preparer: false,
+  },
   // Catalogue
   'catalog.view': { module: 'catalog', label: 'Consulter le catalogue', preparer: true },
   'catalog.manage': {

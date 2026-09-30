@@ -11,7 +11,7 @@
 export interface EmailTemplateDefinition {
   key: string;
   label: string;
-  audience: 'CLIENT' | 'STAFF' | 'SYSTEM';
+  audience: 'CLIENT' | 'STAFF' | 'SYSTEM' | 'SUPPLIER';
   subject: string;
   /** Contenu principal (fragment MJML inséré dans la mise en page commune). */
   body: string;
@@ -120,6 +120,19 @@ export const DEFAULT_TEMPLATES: EmailTemplateDefinition[] = [
     variables: DOC_VARS,
   })),
   {
+    key: 'PURCHASE_ORDER',
+    label: 'Bon de commande fournisseur',
+    audience: 'SUPPLIER',
+    subject: 'Bon de commande {{document.numero}} — {{etablissement.nom}}',
+    body: `<mj-text>Bonjour,</mj-text>
+<mj-text>Veuillez trouver ci-joint notre bon de commande <strong>{{document.numero}}</strong> du {{document.date}} (montant estimé : {{document.montant}}).</mj-text>
+<mj-text>{{message}}</mj-text>
+<mj-text>Merci de nous confirmer la disponibilité et le délai de livraison.</mj-text>
+<mj-text>Cordialement,<br/>{{etablissement.nom}}<br/>{{etablissement.telephone}}</mj-text>`,
+    text: `Bonjour,\n\nVeuillez trouver ci-joint notre bon de commande {{document.numero}} du {{document.date}} (montant estimé : {{document.montant}}).\n\n{{message}}\n\nMerci de nous confirmer la disponibilité et le délai de livraison.\n\nCordialement,\n{{etablissement.nom}}\n{{etablissement.telephone}}`,
+    variables: DOC_VARS,
+  },
+  {
     key: 'ADMIN_NOTIFICATION',
     label: 'Notification administrateur',
     audience: 'STAFF',
@@ -175,12 +188,18 @@ export const DEFAULT_TEMPLATES: EmailTemplateDefinition[] = [
 /** Mise en page commune (logo, couleur de l'établissement, pied de page). */
 export function wrapLayout(
   inner: string,
-  options: { color: string; audience: 'CLIENT' | 'STAFF' | 'SYSTEM'; logoUrl: string | null },
+  options: {
+    color: string;
+    audience: 'CLIENT' | 'STAFF' | 'SYSTEM' | 'SUPPLIER';
+    logoUrl: string | null;
+  },
 ): string {
   const footer =
-    options.audience === 'CLIENT'
-      ? `<mj-text font-size="11px" color="#777777" align="center">{{etablissement.nom}} · {{etablissement.adresse}} · {{etablissement.telephone}}<br/>Vous recevez ce document car vous avez accepté de recevoir vos documents par e-mail. Pour ne plus les recevoir, répondez simplement à ce message ou contactez-nous.</mj-text>`
-      : `<mj-text font-size="11px" color="#777777" align="center">Message automatique de PharmaStock — {{etablissement.nom}}</mj-text>`;
+    options.audience === 'SUPPLIER'
+      ? `<mj-text font-size="11px" color="#777777" align="center">{{etablissement.nom}} · {{etablissement.adresse}} · {{etablissement.telephone}}</mj-text>`
+      : options.audience === 'CLIENT'
+        ? `<mj-text font-size="11px" color="#777777" align="center">{{etablissement.nom}} · {{etablissement.adresse}} · {{etablissement.telephone}}<br/>Vous recevez ce document car vous avez accepté de recevoir vos documents par e-mail. Pour ne plus les recevoir, répondez simplement à ce message ou contactez-nous.</mj-text>`
+        : `<mj-text font-size="11px" color="#777777" align="center">Message automatique de PharmaStock — {{etablissement.nom}}</mj-text>`;
   return `<mjml>
   <mj-head>
     <mj-attributes>

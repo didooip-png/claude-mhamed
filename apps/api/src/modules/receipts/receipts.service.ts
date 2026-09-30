@@ -18,6 +18,7 @@ import type { Actor } from '../../common/request-context.js';
 import type { Prisma, ReceiptStatus } from '../../generated/prisma/client.js';
 import { PrismaService, type Tx } from '../../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service.js';
 import { SequencesService } from '../sequences/sequences.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { StockService } from '../stock/stock.service.js';
@@ -27,13 +28,14 @@ type ReceiptData = z.output<typeof receiptSchema>;
 export interface ReceiptWarning {
   line: number;
   productName: string;
-  kind: 'EXPIRY_SOON' | 'PRICE_VARIANCE';
+  kind: 'EXPIRY_SOON' | 'PRICE_VARIANCE' | 'ORDER_OVERRUN' | 'NOT_ORDERED';
   message: string;
 }
 
 const detailInclude = {
   supplier: { select: { id: true, code: true, name: true } },
   attachment: { select: { id: true, filename: true, mime: true, size: true } },
+  purchaseOrder: { select: { id: true, number: true, status: true } },
   lines: {
     orderBy: { lineNo: 'asc' },
     include: {
@@ -69,6 +71,7 @@ export class ReceiptsService {
     private readonly sequences: SequencesService,
     private readonly settings: SettingsService,
     private readonly stock: StockService,
+    private readonly orders: PurchaseOrdersService,
   ) {}
 
   async list(
@@ -152,9 +155,22 @@ export class ReceiptsService {
       cancelledBy: receipt.cancelledById ? (byId.get(receipt.cancelledById) ?? null) : null,
       warnings:
         receipt.status === 'DRAFT'
-          ? await this.warnings(
-              receipt.lines.map((l) => ({ ...l, expiryDate: isoOf(l.expiryDate)! })),
-            )
+          ? [
+              ...(await this.warnings(
+                receipt.lines.map((l) => ({ ...l, expiryDate: isoOf(l.expiryDate)! })),
+              )),
+              ...(receipt.purchaseOrderId
+                ? await this.orders.warnings(
+                    this.prisma,
+                    receipt.purchaseOrderId,
+                    receipt.lines.map((l) => ({
+                      productId: l.productId,
+                      qty: l.qty,
+                      productName: l.product.name,
+                    })),
+                  )
+                : []),
+            ]
           : [],
     };
   }
@@ -225,6 +241,8 @@ export class ReceiptsService {
         });
     }
     if (data.sourceType === 'SUPPLIER' && !data.supplierId) throw new AppError('SUPPLIER_REQUIRED');
+    if (data.purchaseOrderId)
+      await this.orders.assertReceivable(tx, data.purchaseOrderId, data.supplierId);
     const productIds = [...new Set(data.lines.map((l) => l.productId))];
     const products = await tx.product.findMany({
       where: { id: { in: productIds } },
@@ -281,6 +299,7 @@ export class ReceiptsService {
       receivedAt: toDate(data.receivedAt)!,
       notes: data.notes,
       attachmentId: data.attachmentId ?? null,
+      purchaseOrderId: data.purchaseOrderId ?? null,
     };
   }
 
@@ -389,10 +408,29 @@ export class ReceiptsService {
       const inactive = receipt.lines.filter((l) => !l.product.isActive);
       if (inactive.length > 0)
         throw new AppError('PRODUCT_INACTIVE', { products: inactive.map((l) => l.product.name) });
-      const warnings = await this.warnings(
-        receipt.lines.map((l) => ({ ...l, expiryDate: isoOf(l.expiryDate)!, product: l.product })),
-        tx,
-      );
+      if (receipt.purchaseOrderId)
+        await this.orders.assertReceivable(tx, receipt.purchaseOrderId, receipt.supplierId);
+      const warnings = [
+        ...(await this.warnings(
+          receipt.lines.map((l) => ({
+            ...l,
+            expiryDate: isoOf(l.expiryDate)!,
+            product: l.product,
+          })),
+          tx,
+        )),
+        ...(receipt.purchaseOrderId
+          ? await this.orders.warnings(
+              tx,
+              receipt.purchaseOrderId,
+              receipt.lines.map((l) => ({
+                productId: l.productId,
+                qty: l.qty,
+                productName: l.product.name,
+              })),
+            )
+          : []),
+      ];
       if (warnings.length > 0 && !options.acknowledgeWarnings) {
         throw new AppError(
           'CONFLICT',
@@ -485,6 +523,14 @@ export class ReceiptsService {
         }
       }
 
+      if (receipt.purchaseOrderId) {
+        await this.orders.applyReceipt(
+          tx,
+          receipt.purchaseOrderId,
+          receipt.lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+          1,
+        );
+      }
       const validated = await tx.purchaseReceipt.update({
         where: { id },
         data: {
@@ -562,6 +608,14 @@ export class ReceiptsService {
           where: { id: lot.id },
           data: { status: 'EXHAUSTED', blockReason: `Réception ${receipt.number} annulée` },
         });
+      }
+      if (receipt.purchaseOrderId) {
+        await this.orders.applyReceipt(
+          tx,
+          receipt.purchaseOrderId,
+          receipt.lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+          -1,
+        );
       }
       const cancelled = await tx.purchaseReceipt.update({
         where: { id },

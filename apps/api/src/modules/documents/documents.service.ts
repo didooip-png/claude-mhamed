@@ -722,7 +722,7 @@ export class DocumentsService {
       signatures?: string[];
       landscape?: boolean;
     },
-    actor: Actor,
+    actor: Actor | null,
   ): Promise<Buffer> {
     const e = await this.establishment();
     const s = e.settings;
@@ -794,7 +794,7 @@ export class DocumentsService {
       });
     }
     content.push({
-      text: `Édité le ${formatDateTime(now(), s['general.timezone'])} par ${actor.userCode} — ${actor.userName}`,
+      text: `Édité le ${formatDateTime(now(), s['general.timezone'])}${actor ? ` par ${actor.userCode} — ${actor.userName}` : ''}`,
       fontSize: 7,
       color: '#666',
       margin: [0, 12, 0, 0],
@@ -808,6 +808,66 @@ export class DocumentsService {
       footer: this.footer(s),
       content,
     });
+  }
+
+  /** Bon de commande fournisseur (A4). */
+  async purchaseOrderPdf(orderId: string, actor: Actor | null): Promise<Buffer> {
+    const order = await this.prisma.purchaseOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        supplier: true,
+        lines: { orderBy: { lineNo: 'asc' }, include: { product: true } },
+      },
+    });
+    if (!order) throw new AppError('NOT_FOUND');
+    const creator = await this.prisma.user.findUnique({
+      where: { id: order.createdById },
+      select: { code: true },
+    });
+    const s = await this.settings.all();
+    const m = (v: number | bigint) => this.money(v, s);
+    return this.formPdf(
+      {
+        title: 'Bon de commande',
+        number: order.number ?? 'BROUILLON',
+        meta: [
+          `Le ${formatDateTime(order.sentAt ?? order.createdAt, s['general.timezone'])} par ${creator?.code ?? ''}`,
+          ...(order.status === 'CANCELLED' ? ['ANNULÉ'] : order.number ? [] : ['Non envoyé']),
+        ],
+        info: [
+          { label: 'Fournisseur', value: `${order.supplier.name} (${order.supplier.code})` },
+          ...(order.supplier.phone ? [{ label: 'Téléphone', value: order.supplier.phone }] : []),
+          ...(order.supplier.email ? [{ label: 'E-mail', value: order.supplier.email }] : []),
+          ...(order.expectedDate
+            ? [
+                {
+                  label: 'Livraison souhaitée',
+                  value: formatIsoDate(order.expectedDate.toISOString().slice(0, 10)),
+                },
+              ]
+            : []),
+          ...(order.notes ? [{ label: 'Remarques', value: order.notes }] : []),
+        ],
+        columns: [
+          { key: 'code', header: 'Code', width: 50 },
+          { key: 'product', header: 'Désignation', width: '*' },
+          { key: 'qty', header: 'Quantité', align: 'right' },
+          { key: 'unit', header: 'Prix HT estimé', align: 'right' },
+          { key: 'total', header: 'Total HT', align: 'right' },
+        ],
+        rows: order.lines.map((l) => ({
+          code: l.product.internalCode,
+          product: productLabel(l.product),
+          qty: l.qty,
+          unit: m(l.unitPriceHt),
+          total: m(l.lineTotalHt),
+        })),
+        totals: [{ label: 'Total HT estimé', value: m(order.totalHt) }],
+        notes: ['Prix indicatifs : la facture du fournisseur fait foi à la réception.'],
+        signatures: ['Pharmacie', 'Fournisseur (accusé de réception)'],
+      },
+      actor,
+    );
   }
 
   /** Tableau A4 paysage avec en-tête de l'établissement ; l'export est tracé (DATA_EXPORTED). */
@@ -1524,6 +1584,16 @@ export class DocumentsService {
         content: await this.statementPdf(entityId, from, to),
       };
     }
+    if (entityType === 'purchase_order') {
+      const order = await this.prisma.purchaseOrder.findUnique({
+        where: { id: entityId },
+        select: { number: true },
+      });
+      return {
+        filename: `${order?.number ?? 'bon-de-commande'}.pdf`,
+        content: await this.purchaseOrderPdf(entityId, null),
+      };
+    }
     throw new AppError('NOT_FOUND', { entity: entityType });
   }
 
@@ -1594,6 +1664,22 @@ export class DocumentsService {
           date: formatIsoDate(to),
           montant: this.money(st.closing, s),
           reste_a_payer: this.money(Math.max(0, st.closing), s),
+        },
+      };
+    }
+    if (entityType === 'purchase_order') {
+      const order = await this.prisma.purchaseOrder.findUnique({
+        where: { id: entityId },
+        include: { supplier: true },
+      });
+      if (!order) throw new AppError('NOT_FOUND');
+      return {
+        client: { nom: order.supplier.name },
+        document: {
+          numero: order.number ?? '',
+          date: formatDate(order.sentAt ?? order.createdAt, tz),
+          montant: this.money(order.totalHt, s),
+          reste_a_payer: '',
         },
       };
     }
