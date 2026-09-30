@@ -19,7 +19,8 @@
     "test": "pnpm -r run test",
     "db:migrate": "pnpm --filter @pharmastock/api run db:migrate",
     "db:seed": "pnpm --filter @pharmastock/api run db:seed",
-    "db:reset": "pnpm --filter @pharmastock/api run db:reset"
+    "db:reset": "pnpm --filter @pharmastock/api run db:reset",
+    "docs:build": "pnpm --filter @pharmastock/shared build && pnpm --filter @pharmastock/docs build --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -2,10 +2,12 @@ packages:
   - apps/*
   - packages/*
   - e2e
+  - tools/*
 
 onlyBuiltDependencies:
   - '@prisma/engines'
   - '@swc/core'
+  - electron
   - argon2
   - esbuild
   - prisma

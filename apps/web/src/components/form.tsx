@@ -39,7 +39,8 @@ export function FormField({
             {label}
             {required && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
-          <HelpTip label={`Aide : ${label}`}>{help}</HelpTip>
+          {/* Libellé sans le nom du champ : il ne doit pas se confondre avec lui (lecteurs d'écran, tests). */}
+          <HelpTip>{help}</HelpTip>
         </div>
       ) : (
         <Label htmlFor={id}>

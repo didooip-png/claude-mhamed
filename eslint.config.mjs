@@ -37,7 +37,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/api/src/cli.ts', 'apps/api/prisma/**', 'e2e/**', 'scripts/**'],
+    // Les scènes de capture exécutent du code dans la page (page.evaluate) : globales du navigateur.
+    files: ['tools/**'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
+    files: ['apps/api/src/cli.ts', 'apps/api/prisma/**', 'e2e/**', 'scripts/**', 'tools/**'],
     rules: { 'no-console': 'off' },
   },
   {

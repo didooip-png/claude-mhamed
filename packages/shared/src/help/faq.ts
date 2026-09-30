@@ -70,7 +70,7 @@ export const FAQ: FaqEntry[] = [
     question: 'Le logiciel demande une ordonnance pour un produit',
     roles: [...BOTH],
     answer: [
-      'Ce produit est délivré sur ordonnance ou figure au tableau. Renseignez le prescripteur et le numéro d’ordonnance dans la fenêtre qui s’ouvre : la vente alimente le registre légal.',
+      'Ce produit est délivré sur ordonnance ou figure au tableau. Renseignez le médecin prescripteur et le numéro d’ordonnance dans l’encadré « Ordonnance obligatoire » qui apparaît sous le panier : la vente alimente le registre légal.',
       'Vous ne pouvez pas valider la vente sans ces informations.',
     ],
     link: '/pos',
