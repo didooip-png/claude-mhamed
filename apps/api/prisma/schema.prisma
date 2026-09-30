@@ -828,6 +828,10 @@ model Sale {
   deviceId           String?           @map("device_id") @db.Uuid
   idempotencyKey     String?           @unique @map("idempotency_key")
   notes              String?
+  cashTendered       BigInt?           @map("cash_tendered")
+  changeGiven        BigInt?           @map("change_given")
+  printCount         Int               @default(0) @map("print_count")
+  creditAuthorizedById String?         @map("credit_authorized_by") @db.Uuid
   createdById        String            @map("created_by") @db.Uuid
   validatedById      String?           @map("validated_by") @db.Uuid
   validatedAt        DateTime?         @map("validated_at") @db.Timestamptz(3)
@@ -877,6 +881,10 @@ model SaleLine {
   costTotal       BigInt   @default(0) @map("cost_total")
   returnedQtyBase Int      @default(0) @map("returned_qty_base")
   forcedLotId     String?  @map("forced_lot_id") @db.Uuid
+  discountAuthorizedById String? @map("discount_authorized_by") @db.Uuid
+  priceAuthorizedById    String? @map("price_authorized_by") @db.Uuid
+  lotAuthorizedById      String? @map("lot_authorized_by") @db.Uuid
+  belowCostAuthorizedById String? @map("below_cost_authorized_by") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   sale        Sale                 @relation(fields: [saleId], references: [id], onDelete: Restrict)
@@ -1107,6 +1115,7 @@ model CashSession {
   status         CashSessionStatus @default(OPEN)
   closedById     String?           @map("closed_by") @db.Uuid
   notes          String?
+  closeNotes     String?           @map("close_notes")
 
   site      Site           @relation(fields: [siteId], references: [id], onDelete: Restrict)
   device    Device         @relation(fields: [deviceId], references: [id], onDelete: Restrict)

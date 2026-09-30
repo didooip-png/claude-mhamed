@@ -33,6 +33,7 @@ matrice de permissions, paramètres tracés, détection d'altération du journal
 ## Phase 1 — Catalogue, tiers, réceptions, stock ✅
 
 **Fait**
+
 - Catalogue : produits (codes-barres multiples, DCI, dosage, forme, présentation, laboratoire, catégorie, famille, TVA,
   prix d'achat HT / vente TTC, marge calculée, vente à l'unité, ordonnance, tableau A/B/C, chaîne du froid, retour autorisé,
   emplacement, seuils), code interne automatique, contrôle de version, historique des prix (qui, quand, ancien → nouveau),
@@ -55,7 +56,6 @@ matrice de permissions, paramètres tracés, détection d'altération du journal
 les mouvements avec utilisateur / date / heure et le solde exact. Tests d'intégration : `test/catalog-stock.test.ts`
 (15 tests : coût avec UG, péremptions, unités, annulation, numérotation concurrente, fiche de mouvement, blocage de lot,
 péremptions, stock à date, import, clients). Parcours vérifié dans le navigateur (Playwright).
-
 
 ## Phase 2 — Ventes et mouchard ⏳
 

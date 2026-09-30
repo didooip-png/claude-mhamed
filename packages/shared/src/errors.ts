@@ -87,6 +87,8 @@ export const ERROR_MESSAGES = {
   EMAIL_DISABLED: 'L’envoi d’e-mails est désactivé ou le serveur SMTP n’est pas configuré.',
   EMAIL_INVALID: 'Adresse e-mail invalide.',
   SMTP_ERROR: 'Erreur de connexion au serveur SMTP.',
+  EMAIL_CONSENT_REQUIRED:
+    'Ce client n’a pas donné son consentement à l’envoi de documents par e-mail : confirmez l’envoi.',
   CRITICAL_ALERTS_REQUIRED:
     'Au moins un administrateur doit rester abonné par e-mail aux alertes critiques.',
 } as const;

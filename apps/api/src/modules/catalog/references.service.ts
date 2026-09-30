@@ -131,9 +131,7 @@ export class ReferencesService {
       therapeuticClass: this.prisma.therapeuticClass,
       tvaRate: this.prisma.tvaRate,
     }[kind] as unknown as {
-      findUnique(
-        a: unknown,
-      ): Promise<{
+      findUnique(a: unknown): Promise<{
         id: string;
         name?: string;
         label?: string;

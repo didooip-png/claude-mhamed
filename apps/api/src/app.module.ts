@@ -39,6 +39,20 @@ import { SettingsController } from './modules/settings/settings.controller.js';
 import { UsersController } from './modules/users/users.controller.js';
 import { UsersService } from './modules/users/users.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { LedgerService } from './modules/accounts/ledger.service.js';
+import { CashController } from './modules/cash/cash.controller.js';
+import { CashService } from './modules/cash/cash.service.js';
+import { DocumentsService } from './modules/documents/documents.service.js';
+import { EmailTemplatesService } from './modules/email/email-templates.service.js';
+import { EmailController } from './modules/email/email.controller.js';
+import { EmailOutboxService } from './modules/email/outbox.service.js';
+import { SmtpService } from './modules/email/smtp.service.js';
+import { NotificationsController } from './modules/notifications/notifications.controller.js';
+import { NotificationsService } from './modules/notifications/notifications.service.js';
+import { PaymentsCoreService } from './modules/payments/payments-core.service.js';
+import { SalesQueriesService } from './modules/sales/sales-queries.service.js';
+import { SalesController } from './modules/sales/sales.controller.js';
+import { SalesService } from './modules/sales/sales.service.js';
 
 const config = loadConfig();
 
@@ -96,6 +110,10 @@ const config = loadConfig();
     ClientsController,
     ReceiptsController,
     StockController,
+    SalesController,
+    CashController,
+    EmailController,
+    NotificationsController,
   ],
   providers: [
     UsersService,
@@ -110,6 +128,16 @@ const config = loadConfig();
     SuppliersService,
     ClientsService,
     ReceiptsService,
+    LedgerService,
+    PaymentsCoreService,
+    CashService,
+    SalesService,
+    SalesQueriesService,
+    DocumentsService,
+    SmtpService,
+    EmailTemplatesService,
+    EmailOutboxService,
+    NotificationsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SecurityGuard },
     { provide: APP_INTERCEPTOR, useClass: OverrideAuditInterceptor },
