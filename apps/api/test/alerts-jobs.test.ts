@@ -386,7 +386,11 @@ describe('Scénario 7 : remise hors plafond, e-mails et rapport d’activité', 
     await outbox.processBatch();
     const digest = smtp.messages
       .slice(beforeDigest)
-      .find((m) => (m.subject ?? '').includes('Rapport d’activité du'));
+      .find(
+        (m) =>
+          (m.subject ?? '').includes('Rapport d’activité du') &&
+          JSON.stringify(m.to).includes(ADMIN_EMAIL),
+      );
     expect(digest).toBeDefined();
     expect(JSON.stringify(digest!.to)).toContain(ADMIN_EMAIL);
     expect(digest!.html || '').toContain(prep.code);
@@ -437,7 +441,11 @@ describe('Résumé quotidien', () => {
     await outbox.processBatch();
     const mail = smtp.messages
       .slice(before)
-      .find((m) => (m.subject ?? '').includes('Résumé quotidien'));
+      .find(
+        (m) =>
+          (m.subject ?? '').includes('Résumé quotidien') &&
+          JSON.stringify(m.to).includes(ADMIN_EMAIL),
+      );
     expect(mail).toBeDefined();
     expect(mail!.html || '').toContain('Ligne retirée du panier');
     expect(mail!.text || '').toContain(p.name);
