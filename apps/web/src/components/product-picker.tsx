@@ -1,6 +1,7 @@
 import { formatMoney, formatStockQty, productLabel } from '@pharmastock/shared';
-import { Loader2, Search, Snowflake } from 'lucide-react';
+import { Loader2, ScanLine, Search, Snowflake } from 'lucide-react';
 import * as React from 'react';
+import { CameraScannerDialog, useCameraScanSupported } from '@/components/camera-scanner';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ExpiryBadge } from '@/components/stock-badges';
@@ -42,6 +43,8 @@ export function ProductPicker({
   const [active, setActive] = React.useState(0);
   const requestId = React.useRef(0);
   const listId = React.useId();
+  const cameraSupported = useCameraScanSupported();
+  const [scanning, setScanning] = React.useState(false);
 
   const run = React.useCallback(
     async (q: string): Promise<Product[]> => {
@@ -72,6 +75,20 @@ export function ProductPicker({
     return () => window.clearTimeout(handle);
   }, [query, run]);
 
+  /** Code lu par la caméra : sélection directe du produit correspondant (comme un lecteur USB). */
+  const onScanned = async (code: string) => {
+    const list = await run(code);
+    const exact = list.find(
+      (p) => p.barcodes.some((b) => b.barcode === code) || p.internalCode === code.toUpperCase(),
+    );
+    const pick = exact ?? list[0];
+    if (pick) choose(pick);
+    else {
+      setQuery(code);
+      setOpen(true);
+    }
+  };
+
   const choose = (p: Product) => {
     onSelect(p);
     if (clearOnSelect) {
@@ -91,7 +108,7 @@ export function ProductPicker({
         aria-expanded={open && results.length > 0}
         aria-controls={listId}
         aria-autocomplete="list"
-        className="pl-8"
+        className={cn('pl-8', cameraSupported && 'pr-11')}
         placeholder={placeholder ?? 'Nom, DCI, code ou code-barres…'}
         value={query}
         onChange={(e) => {
@@ -130,13 +147,35 @@ export function ProductPicker({
         }}
       />
       {loading && (
-        <Loader2 className="absolute top-1/2 right-2.5 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+        <Loader2
+          className={cn(
+            'absolute top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground',
+            cameraSupported ? 'right-12' : 'right-2.5',
+          )}
+        />
+      )}
+      {cameraSupported && (
+        <>
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            aria-label="Scanner avec la caméra"
+            className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-primary hover:bg-muted"
+          >
+            <ScanLine className="size-5" />
+          </button>
+          <CameraScannerDialog
+            open={scanning}
+            onOpenChange={setScanning}
+            onDetect={(code) => void onScanned(code)}
+          />
+        </>
       )}
       {open && query.trim() && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-40 mt-1 max-h-96 w-full min-w-[28rem] overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
+          className="absolute z-40 mt-1 max-h-96 w-full min-w-0 sm:min-w-[28rem] overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
         >
           {!loading && results.length === 0 && (
             <li className="px-3 py-4 text-center text-sm text-muted-foreground">

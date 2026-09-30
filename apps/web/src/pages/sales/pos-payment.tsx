@@ -259,7 +259,7 @@ export function PaymentDialog({
             {rows.map((r, i) => (
               <div key={r.key} className="rounded-md border p-2.5">
                 <div className="flex flex-wrap items-end gap-2">
-                  <FormField label="Mode" className="w-40">
+                  <FormField label="Mode" className="w-full sm:w-40">
                     <NativeSelect
                       value={r.method}
                       onChange={(e) =>
@@ -274,7 +274,7 @@ export function PaymentDialog({
                       ))}
                     </NativeSelect>
                   </FormField>
-                  <FormField label="Montant" className="w-40">
+                  <FormField label="Montant" className="w-full sm:w-40">
                     <MoneyInput
                       ref={i === 0 ? firstAmount : undefined}
                       value={r.amount}
@@ -284,7 +284,7 @@ export function PaymentDialog({
                   </FormField>
                   {r.method === 'CASH' && (
                     <>
-                      <FormField label="Montant remis" className="w-40">
+                      <FormField label="Montant remis" className="w-full sm:w-40">
                         <MoneyInput
                           value={r.tendered}
                           onValueChange={(v) => update(r.key, { tendered: v })}
@@ -303,19 +303,19 @@ export function PaymentDialog({
                   )}
                   {r.method === 'CHEQUE' && (
                     <>
-                      <FormField label="N° de chèque" className="w-32">
+                      <FormField label="N° de chèque" className="w-full sm:w-32">
                         <Input
                           value={r.chequeNumber}
                           onChange={(e) => update(r.key, { chequeNumber: e.target.value })}
                         />
                       </FormField>
-                      <FormField label="Banque" className="w-32">
+                      <FormField label="Banque" className="w-full sm:w-32">
                         <Input
                           value={r.bank}
                           onChange={(e) => update(r.key, { bank: e.target.value })}
                         />
                       </FormField>
-                      <FormField label="Échéance" className="w-40">
+                      <FormField label="Échéance" className="w-full sm:w-40">
                         <Input
                           type="date"
                           value={r.dueDate}
@@ -325,7 +325,7 @@ export function PaymentDialog({
                     </>
                   )}
                   {r.method === 'TRANSFER' && (
-                    <FormField label="Référence" className="w-48">
+                    <FormField label="Référence" className="w-full sm:w-48">
                       <Input
                         value={r.reference}
                         onChange={(e) => update(r.key, { reference: e.target.value })}
@@ -334,14 +334,14 @@ export function PaymentDialog({
                   )}
                   {r.method === 'DRAFT_BILL' && (
                     <>
-                      <FormField label="Échéance" className="w-40">
+                      <FormField label="Échéance" className="w-full sm:w-40">
                         <Input
                           type="date"
                           value={r.dueDate}
                           onChange={(e) => update(r.key, { dueDate: e.target.value })}
                         />
                       </FormField>
-                      <FormField label="Référence" className="w-36">
+                      <FormField label="Référence" className="w-full sm:w-36">
                         <Input
                           value={r.reference}
                           onChange={(e) => update(r.key, { reference: e.target.value })}

@@ -3,6 +3,7 @@ import { AlertTriangle, Monitor, ShieldCheck } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/form';
+import { InstallButton } from '@/components/install-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, ApiError, errorText } from '@/lib/api';
@@ -20,6 +21,9 @@ function AuthLayout({
 }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-accent/60 to-background p-4">
+      <div className="fixed top-[calc(0.75rem+env(safe-area-inset-top))] right-[calc(0.75rem+env(safe-area-inset-right))] z-20">
+        <InstallButton />
+      </div>
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <img src="/icon.svg" alt="" className="size-12" />

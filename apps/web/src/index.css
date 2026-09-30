@@ -98,6 +98,21 @@
   html {
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /*
+   * Les éléments d'une grille ne doivent pas imposer la largeur de leur contenu (tableaux, longues
+   * lignes) : sans cela, sur téléphone, toute la page dépasse de l'écran. Les classes `min-w-*`
+   * (couche « utilities ») restent prioritaires.
+   */
+  .grid > * {
+    min-width: 0;
+  }
+  /* Pas de zoom au double-toucher ni de « rebond » de page sous l'application installée. */
+  body {
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
   }
   body {
     @apply bg-background text-foreground text-sm;
@@ -109,6 +124,28 @@
 
 @utility tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Écrans tactiles (téléphone, tablette) : zones de toucher confortables et champs à 16 px minimum
+ * (en dessous, iOS zoome automatiquement sur le champ et décale toute la page).
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 2.75rem;
+  }
+  button:not([data-dense]),
+  [role='button']:not([data-dense]),
+  summary {
+    min-height: 2.5rem;
+  }
+  [role='option'],
+  [role='menuitem'] {
+    min-height: 2.5rem;
+  }
 }
 
 /* Pas d'animations gratuites : on respecte la préférence système. */

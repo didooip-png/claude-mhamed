@@ -8,7 +8,7 @@ export function TabsList({ className, ...props }: React.ComponentProps<typeof Pr
   return (
     <Primitive.List
       className={cn(
-        'inline-flex h-9 items-center gap-1 rounded-lg bg-muted p-1 text-muted-foreground',
+        'inline-flex h-9 max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground',
         className,
       )}
       {...props}

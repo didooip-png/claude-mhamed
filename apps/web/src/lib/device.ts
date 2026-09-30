@@ -28,23 +28,26 @@ export function clearDevice(): void {
 
 export function suggestDeviceName(): string {
   const ua = navigator.userAgent;
-  const browser = /Edg\//.test(ua)
+  const ios = /iPad|iPhone|iPod/.test(ua);
+  const browser = /Edg(A|iOS)?\//.test(ua)
     ? 'Edge'
-    : /Firefox\//.test(ua)
+    : /Firefox\/|FxiOS\//.test(ua)
       ? 'Firefox'
-      : /Chrome\//.test(ua)
+      : /Chrome\/|CriOS\//.test(ua)
         ? 'Chrome'
         : /Safari\//.test(ua)
           ? 'Safari'
           : 'Navigateur';
   const os = /Windows/.test(ua)
     ? 'Windows'
-    : /Mac OS/.test(ua)
-      ? 'macOS'
+    : ios
+      ? /iPad/.test(ua)
+        ? 'iPad'
+        : 'iPhone'
       : /Android/.test(ua)
         ? 'Android'
-        : /iPad|iPhone/.test(ua)
-          ? 'iOS'
+        : /Mac OS/.test(ua)
+          ? 'macOS'
           : /Linux/.test(ua)
             ? 'Linux'
             : '';

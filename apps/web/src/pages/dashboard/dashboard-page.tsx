@@ -265,7 +265,7 @@ function PeriodCard({
             <dt className="text-xs text-muted-foreground">Marge</dt>
             <dd className="font-medium tabular">
               {fmt.money(current.margin)}
-              <span className="ml-1 text-xs text-muted-foreground">
+              <span className="block text-xs whitespace-nowrap text-muted-foreground sm:ml-1 sm:inline">
                 ({(current.marginRate / 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}{' '}
                 %)
               </span>

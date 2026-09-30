@@ -1,13 +1,17 @@
 import { Command as Cmdk } from 'cmdk';
 import {
+  Boxes,
   ChevronDown,
+  Home,
   KeyRound,
   Lock,
   LogOut,
   Menu,
   Monitor,
   Moon,
+  Receipt,
   Search,
+  ShoppingCart,
   Sun,
   UserRound,
   Users,
@@ -41,6 +45,7 @@ import { useAuth, useMe } from '@/lib/auth';
 import { useSettings } from '@/lib/queries';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
+import { InstallBanner, InstallButton } from '@/components/install-button';
 import { OverrideDialogHost } from '@/components/override-dialog';
 import { NotificationBell } from '@/pages/notifications/notifications';
 import { AVAILABLE_ROUTES, NAV, type NavItem } from './nav';
@@ -344,6 +349,48 @@ function useInactivityLock() {
   }, [minutes, lock]);
 }
 
+/** Barre de navigation basse (téléphone) : accès direct aux écrans les plus utilisés. */
+function BottomNav({ onMenu }: { onMenu: () => void }) {
+  const me = useMe();
+  const items = [
+    { to: '/', label: 'Accueil', icon: Home, anyOf: undefined as string[] | undefined },
+    { to: '/pos', label: 'Caisse', icon: ShoppingCart, anyOf: ['sales.create'] },
+    { to: '/sales', label: 'Ventes', icon: Receipt, anyOf: ['sales.create', 'sales.view_all'] },
+    { to: '/stock', label: 'Stock', icon: Boxes, anyOf: ['stock.view'] },
+  ].filter(
+    (i) =>
+      (!i.anyOf || i.anyOf.some((p) => me.permissions.includes(p as never))) &&
+      AVAILABLE_ROUTES.has(i.to),
+  );
+  const tab =
+    'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground';
+  return (
+    <nav
+      aria-label="Navigation rapide"
+      className="flex shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
+    >
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) => cn(tab, isActive && 'text-primary')}
+          >
+            <Icon className="size-5" />
+            {item.label}
+          </NavLink>
+        );
+      })}
+      <button type="button" onClick={onMenu} className={cn(tab, 'cursor-pointer')}>
+        <Menu className="size-5" />
+        Menu
+      </button>
+    </nav>
+  );
+}
+
 export function AppShell() {
   const me = useMe();
   const { state, logout, lock } = useAuth();
@@ -387,11 +434,11 @@ export function AppShell() {
         {mobileNav && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNav(false)} />
-            <aside className="absolute inset-y-0 left-0 w-72 border-r bg-sidebar shadow-lg">
+            <aside className="absolute inset-y-0 left-0 w-[85vw] max-w-80 border-r bg-sidebar pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-lg">
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="absolute top-3 right-2"
+                className="absolute top-[calc(0.75rem+env(safe-area-inset-top))] right-2"
                 onClick={() => setMobileNav(false)}
                 aria-label="Fermer le menu"
               >
@@ -402,7 +449,7 @@ export function AppShell() {
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-card px-3 print:hidden">
+          <header className="flex h-[calc(3rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b bg-card px-3 pt-[env(safe-area-inset-top)] print:hidden">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -415,13 +462,15 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
-              className="flex h-8 w-full max-w-md cursor-pointer items-center gap-2 rounded-md border bg-muted/50 px-2.5 text-sm text-muted-foreground hover:bg-muted"
+              aria-label="Rechercher"
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-muted/50 text-muted-foreground hover:bg-muted sm:h-8 sm:w-full sm:max-w-md sm:justify-start sm:gap-2 sm:px-2.5 sm:text-sm"
             >
               <Search className="size-4" />
-              <span className="truncate">Rechercher…</span>
+              <span className="hidden truncate sm:inline">Rechercher…</span>
               <Kbd className="ml-auto hidden sm:inline-flex">Ctrl K</Kbd>
             </button>
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <InstallButton />
               <ConnectionIndicator />
               <NotificationBell />
               <Tooltip content="Poste de travail courant">
@@ -469,19 +518,21 @@ export function AppShell() {
               </DropdownMenu>
             </div>
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto">
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {fullBleed ? (
               <div className="h-full p-3">
                 <Outlet />
               </div>
             ) : (
-              <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-6">
+              <div className="mx-auto w-full max-w-[1600px] p-3 sm:p-4 lg:p-6">
                 <Outlet />
               </div>
             )}
           </main>
         </div>
       </div>
+      {!fullBleed && <BottomNav onMenu={() => setMobileNav(true)} />}
+      <InstallBanner />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SwitchUserDialog open={switchOpen} onOpenChange={setSwitchOpen} />
       <OverrideDialogHost />

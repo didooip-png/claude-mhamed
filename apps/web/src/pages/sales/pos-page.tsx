@@ -12,8 +12,10 @@ import {
   FileText,
   HelpCircle,
   Layers,
+  Minus,
   Pause,
   Percent,
+  Plus,
   Printer,
   Replace,
   ShoppingCart,
@@ -47,6 +49,7 @@ import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { api, errorText, newIdempotencyKey } from '@/lib/api';
 import { useCan } from '@/lib/auth';
 import { useFormat } from '@/lib/format';
+import { useIsMobile } from '@/lib/media';
 import { platform } from '@/lib/platform';
 import { useSettings } from '@/lib/queries';
 import type { LotRow, Product } from '@/lib/types';
@@ -100,6 +103,7 @@ export function PosPage() {
   const can = useCan();
   const settings = useSettings();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   const [sale, setSale] = React.useState<SaleView | null>(null);
   const [booting, setBooting] = React.useState(true);
   const [selected, setSelected] = React.useState(0);
@@ -437,7 +441,7 @@ export function PosPage() {
   const totals = sale?.totals;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex flex-col gap-3 md:h-full md:min-h-0">
       {lastSale && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 dark:border-emerald-800 dark:bg-emerald-950/40">
           <CheckCircle2 className="size-5 text-emerald-600" />
@@ -550,7 +554,7 @@ export function PosPage() {
 
       <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* Panier */}
-        <div className="flex min-h-0 flex-col gap-2 rounded-lg border bg-card p-3">
+        <div className="flex flex-col gap-2 rounded-lg border bg-card p-3 md:min-h-0">
           <div className="flex items-center gap-2">
             <ProductPicker
               inputRef={productInput}
@@ -568,13 +572,48 @@ export function PosPage() {
               <HelpCircle />
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="md:min-h-0 md:flex-1 md:overflow-auto">
             {lines.length === 0 ? (
               <EmptyState
                 icon={<ShoppingCart />}
                 title="Panier vide"
                 description="Scannez un code-barres ou recherchez un produit (nom, DCI, code)."
               />
+            ) : isMobile ? (
+              <div className="flex flex-col gap-2">
+                {lines.map((l, i) => (
+                  <CartCard
+                    key={l.id}
+                    line={l}
+                    index={i}
+                    selected={selectedLine?.id === l.id}
+                    onSelect={() => setSelected(i)}
+                    qtyRef={(el) => {
+                      if (el) qtyInputs.current.set(l.id, el);
+                      else qtyInputs.current.delete(l.id);
+                    }}
+                    onQty={(qty) => qty !== l.qty && void updateLine(l.id, { qty })}
+                    onUnit={(unit) => void updateLine(l.id, { unit })}
+                    onEdit={() => {
+                      setSelected(i);
+                      setDialog('line');
+                    }}
+                    onLots={() => {
+                      setSelected(i);
+                      setDialog('lots');
+                    }}
+                    onEquivalents={() => {
+                      setEquivalentsOf({
+                        id: l.product.id,
+                        name: l.product.name,
+                        replaceLineId: l.id,
+                      });
+                      setDialog('equivalents');
+                    }}
+                    onRemove={() => void removeLine(l.id)}
+                  />
+                ))}
+              </div>
             ) : (
               <Table>
                 <THead>
@@ -632,7 +671,7 @@ export function PosPage() {
           {sale?.prescription.required && (
             <PrescriptionCard sale={sale} onSave={savePrescription} />
           )}
-          <div className="rounded-lg border bg-card p-4">
+          <div className="hidden rounded-lg border bg-card p-4 md:block">
             <dl className="flex flex-col gap-1 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Total HT</dt>
@@ -669,6 +708,7 @@ export function PosPage() {
           </div>
           <Button
             size="xl"
+            className="hidden md:inline-flex"
             onClick={openPayment}
             disabled={!sale || lines.length === 0 || validating}
           >
@@ -703,6 +743,27 @@ export function PosPage() {
           </div>
         </div>
       </div>
+
+      {isMobile && (
+        <div className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-auto flex items-center gap-3 border-t bg-card px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-xs text-muted-foreground">
+              Total TTC · {lines.length} ligne{lines.length > 1 ? 's' : ''}
+            </div>
+            <div className="truncate text-2xl font-bold tabular" data-testid="pos-total-mobile">
+              {fmt.money(totals?.totalTtc ?? 0)}
+            </div>
+          </div>
+          <Button
+            size="lg"
+            className="h-12 min-w-36"
+            onClick={openPayment}
+            disabled={!sale || lines.length === 0 || validating}
+          >
+            <Wallet /> Paiement
+          </Button>
+        </div>
+      )}
 
       {sale && (
         <PaymentDialog
@@ -1006,6 +1067,200 @@ function CartRow({
         </div>
       </TD>
     </TR>
+  );
+}
+
+/** Ligne du panier en version téléphone : quantité au pouce (− / +), actions en dessous. */
+function CartCard({
+  line: l,
+  selected,
+  onSelect,
+  qtyRef,
+  onQty,
+  onUnit,
+  onEdit,
+  onLots,
+  onEquivalents,
+  onRemove,
+}: {
+  line: SaleLineView;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+  qtyRef: (el: HTMLInputElement | null) => void;
+  onQty: (qty: number) => void;
+  onUnit: (unit: 'PACK' | 'UNIT') => void;
+  onEdit: () => void;
+  onLots: () => void;
+  onEquivalents: () => void;
+  onRemove: () => void;
+}) {
+  const fmt = useFormat();
+  const [qty, setQty] = React.useState(String(l.qty));
+  React.useEffect(() => setQty(String(l.qty)), [l.qty]);
+  const commit = () => {
+    const n = Number.parseInt(qty, 10);
+    if (Number.isInteger(n) && n > 0 && n <= 100_000) onQty(n);
+    else setQty(String(l.qty));
+  };
+  const p = l.product;
+  return (
+    <div
+      data-cart-line
+      aria-selected={selected}
+      onClick={onSelect}
+      className={cn(
+        'rounded-lg border p-3',
+        selected && 'border-primary/50 bg-primary/5',
+        l.stockIssue && 'border-destructive/40 bg-destructive/5',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium">{productLabel(p)}</span>
+            {p.requiresPrescription && <Badge variant="blue">Ordonnance</Badge>}
+            {p.controlledClass !== 'NONE' && (
+              <Badge variant="red">Tableau {p.controlledClass}</Badge>
+            )}
+            {p.coldChain && (
+              <Snowflake className="size-3.5 text-sky-600" aria-label="Chaîne du froid" />
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {p.internalCode}
+            {p.sellable !== null &&
+              ` · vendable ${formatStockQty(p.sellable, p.unitsPerPack, p.sellByUnit)}`}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-mt-1 -mr-1 shrink-0 text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label="Retirer la ligne"
+        >
+          <Trash2 />
+        </Button>
+      </div>
+      {l.lots.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {l.lots.map((lot) => (
+            <Badge
+              key={lot.lotId}
+              variant={l.forcedLotId === lot.lotId ? 'orange' : 'gray'}
+              className="tabular"
+            >
+              {lot.lotNumber} · {formatIsoDate(lot.expiryDate).slice(3)} ×{' '}
+              {formatStockQty(lot.qty, p.unitsPerPack, p.sellByUnit)}
+            </Badge>
+          ))}
+        </div>
+      )}
+      {l.stockIssue && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-destructive">
+          <AlertTriangle className="size-3.5" />
+          Stock insuffisant : vendable {l.stockIssue.sellable}
+          {l.stockIssue.blocked > 0 && `, bloqué ${l.stockIssue.blocked}`}
+          {l.stockIssue.expired > 0 && `, périmé ${l.stockIssue.expired}`}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEquivalents();
+            }}
+          >
+            <Replace /> Équivalents
+          </Button>
+        </div>
+      )}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-11"
+            aria-label="Diminuer la quantité"
+            disabled={l.qty <= 1}
+            onClick={() => onQty(l.qty - 1)}
+          >
+            <Minus />
+          </Button>
+          <Input
+            ref={qtyRef}
+            inputMode="numeric"
+            aria-label={`Quantité de ${p.name}`}
+            className="w-14 text-center tabular"
+            value={qty}
+            onChange={(e) => setQty(e.target.value.replace(/\D/g, ''))}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commit();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-11"
+            aria-label="Augmenter la quantité"
+            onClick={() => onQty(l.qty + 1)}
+          >
+            <Plus />
+          </Button>
+          {p.sellByUnit && (
+            <NativeSelect
+              className="ml-1 w-24"
+              value={l.unit}
+              onChange={(e) => onUnit(e.target.value as 'PACK' | 'UNIT')}
+              aria-label="Unité"
+            >
+              <option value="PACK">Boîte</option>
+              <option value="UNIT">Unité</option>
+            </NativeSelect>
+          )}
+        </div>
+        <div className="text-right leading-tight">
+          <div className="text-xs text-muted-foreground tabular">
+            {fmt.amount(l.unitPriceTtc)}
+            {l.discountBp > 0 && ` · −${fmt.percent(l.discountBp)}`}
+            {(l.authorized.price || l.authorized.discount) && ' 🔑'}
+          </div>
+          <div className="text-lg font-semibold tabular">{fmt.amount(l.lineTotalTtc)}</div>
+        </div>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+        >
+          <Percent /> Remise / prix
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onLots();
+          }}
+        >
+          <Layers /> Lot
+        </Button>
+      </div>
+    </div>
   );
 }
 
