@@ -47,13 +47,15 @@ Les **manuels PDF** (Administrateur, Préparateur), l'**aide-mémoire d'une page
 
 ## Les étapes
 
-**1. Préparer le serveur.** Connectez-vous en SSH. Copiez ce dossier sur le serveur, par exemple depuis votre PC :
+**1. Préparer le serveur.** Connectez-vous en SSH. Copiez ce dossier sur le serveur sous le nom `PharmaStock-migration`,
+par exemple depuis votre PC (remplacez la date par celle de votre dossier) :
 
 ```
-scp -r PharmaStock-migration root@ADRESSE_IP:/root/
+scp -r PharmaStock-migration-AAAAMMJJ root@ADRESSE_IP:/root/PharmaStock-migration
 ```
 
-(ou décompressez l'archive `.zip` / `.tar.gz` sur le serveur). Puis, sur le serveur :
+(ou envoyez l'archive `.zip` / `.tar.gz` puis décompressez-la sur le serveur : `unzip PharmaStock-migration-*.zip` puis
+`mv PharmaStock-migration-* PharmaStock-migration`). Puis, sur le serveur :
 
 ```
 cd /root/PharmaStock-migration/code
@@ -62,6 +64,10 @@ sudo bash migration/scripts/vps-preparer.sh
 
 Ce script installe Docker, active le pare-feu (seuls SSH, HTTP et HTTPS restent ouverts), les mises à jour de
 sécurité automatiques et le fuseau horaire de Tunis. Il ne supprime rien et peut être relancé.
+
+> **Conseil de sécurité** (recommandé, facultatif) : plutôt que de travailler en `root`, créez un utilisateur
+> normal (`adduser pharma && usermod -aG sudo,docker pharma`), copiez le dossier dans `/home/pharma/` et lancez
+> Claude Code avec cet utilisateur : il ne pourra alors rien faire d'irréparable sans `sudo`.
 
 **2. Lancer Claude Code dans le dossier du code.**
 

@@ -1,3 +1,4 @@
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { normalizeServerUrl, sanitizeSettings } from '../src/config.js';
 import { openDrawerCommand } from '../src/escpos.js';
@@ -42,13 +43,12 @@ describe('adresse du serveur', () => {
 });
 
 describe('protocole app://', () => {
-  const root = '/opt/app/renderer';
+  // Chemins propres au système (le test tourne aussi sous Windows, en CI).
+  const root = resolve('/opt/app/renderer');
   it('sert les fichiers et renvoie index.html pour les routes du site', () => {
-    expect(resolveAppFile(root, '/assets/app-1a2b.js')).toBe(
-      '/opt/app/renderer/assets/app-1a2b.js',
-    );
-    expect(resolveAppFile(root, '/')).toBe('/opt/app/renderer/index.html');
-    expect(resolveAppFile(root, '/sales/123')).toBe('/opt/app/renderer/index.html');
+    expect(resolveAppFile(root, '/assets/app-1a2b.js')).toBe(join(root, 'assets', 'app-1a2b.js'));
+    expect(resolveAppFile(root, '/')).toBe(join(root, 'index.html'));
+    expect(resolveAppFile(root, '/sales/123')).toBe(join(root, 'index.html'));
   });
   it('refuse toute sortie du dossier', () => {
     for (const bad of [

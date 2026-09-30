@@ -18,6 +18,7 @@ export default tseslint.config(
       'apps/desktop/renderer/**',
       'apps/desktop/release/**',
       'tools/docs/.cache/**',
+      'migration-out/**',
       'test-results/**',
     ],
   },
