@@ -10,12 +10,12 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../../..');
 
-execFileSync('pnpm', ['--filter', '@pharmastock/shared', 'build'], { cwd: root, stdio: 'inherit' });
-execFileSync('pnpm', ['--filter', '@pharmastock/web', 'build'], {
-  cwd: root,
-  stdio: 'inherit',
-  env: process.env,
-});
+// Sous Windows, « pnpm » est un script .cmd : il faut passer par un interpréteur de commandes.
+const pnpm = (...args) =>
+  execFileSync('pnpm', args, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' });
+
+pnpm('--filter', '@pharmastock/shared', 'build');
+pnpm('--filter', '@pharmastock/web', 'build');
 
 const target = resolve(here, '../renderer');
 await rm(target, { recursive: true, force: true });
