@@ -305,9 +305,11 @@ export class JobsService {
       }[]
     >`
       SELECT l.id, l.lot_number, l.remaining_qty, p.name AS product_name,
-             COALESCE((SELECT SUM(m.qty) FROM stock_movements m WHERE m.lot_id = l.id), 0)::bigint AS movements
-      FROM lots l JOIN products p ON p.id = l.product_id
-      WHERE l.remaining_qty <> COALESCE((SELECT SUM(m.qty) FROM stock_movements m WHERE m.lot_id = l.id), 0)
+             COALESCE(m.total, 0)::bigint AS movements
+      FROM lots l
+      JOIN products p ON p.id = l.product_id
+      LEFT JOIN (SELECT lot_id, SUM(qty) AS total FROM stock_movements GROUP BY lot_id) m ON m.lot_id = l.id
+      WHERE l.remaining_qty <> COALESCE(m.total, 0)
       ORDER BY p.name, l.lot_number LIMIT 200`;
     const checked = await this.prisma.lot.count();
     if (rows.length === 0) return { checked, inconsistent: 0 };

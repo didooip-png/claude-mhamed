@@ -36,7 +36,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://pharmastock:${POSTGRES_PASSWORD}@postgres:5432/pharmastock?schema=public
+      # Compte propriétaire (migrations, sauvegarde préalable) et compte applicatif restreint :
+      # ce dernier ne peut ni modifier ni supprimer mouvements, mouchard et grand livre.
+      MIGRATE_DATABASE_URL: postgresql://pharmastock:${POSTGRES_PASSWORD}@postgres:5432/pharmastock?schema=public
+      DATABASE_URL: postgresql://pharmastock_app:${APP_DB_PASSWORD:?APP_DB_PASSWORD est obligatoire}@postgres:5432/pharmastock?schema=public
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET est obligatoire}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY est obligatoire}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:?APP_PUBLIC_URL est obligatoire (ex. https://pharmacie.example.com)}

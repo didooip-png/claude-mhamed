@@ -63,7 +63,8 @@ jobs:
       - name: Configuration de test
         run: |
           {
-            echo "POSTGRES_PASSWORD=ci-$(openssl rand -hex 8)"
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "APP_DB_PASSWORD=$(openssl rand -hex 16)"
             echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
             echo "APP_ENCRYPTION_KEY=$(openssl rand -hex 32)"
             echo "APP_PUBLIC_URL=http://localhost"

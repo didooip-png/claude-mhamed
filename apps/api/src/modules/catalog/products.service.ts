@@ -107,6 +107,41 @@ export class ProductsService {
     return rest as T;
   }
 
+  /**
+   * Prédicat SQL de recherche (alias `p`) en trois voies indexées, choisies avant la requête
+   * principale afin que PostgreSQL n'ait jamais à parcourir tout le catalogue :
+   *  1. code-barres / code interne exacts (index uniques) ;
+   *  2. texte : tous les mots présents (LIKE + index trigramme) ;
+   *  3. tolérance aux fautes de frappe (similarité de mots), seulement si le texte ne trouve rien.
+   */
+  private async searchMatch(
+    raw: string,
+  ): Promise<{ term: string; exact: string[]; predicate: Prisma.Sql }> {
+    const query = raw.trim();
+    const term = normalizeSearch(query);
+    const words = term.split(' ').filter(Boolean);
+    const exact = (
+      await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT product_id AS id FROM product_barcodes WHERE barcode = ${query}
+        UNION
+        SELECT id FROM products WHERE internal_code = ${query.toUpperCase()}`
+    ).map((r) => r.id);
+    const parts: Prisma.Sql[] = [];
+    if (exact.length > 0) parts.push(Prisma.sql`p.id = ANY(${exact}::uuid[])`);
+    if (words.length > 0) {
+      const likes = Prisma.join(
+        words.map((w) => Prisma.sql`p.search_text LIKE ${`%${w}%`}`),
+        ' AND ',
+      );
+      const found = await this.prisma.$queryRaw<{ ok: number }[]>`
+        SELECT 1 AS ok FROM products p WHERE ${likes} LIMIT 1`;
+      parts.push(found.length > 0 ? likes : Prisma.sql`${term} <% p.search_text`);
+    }
+    const predicate =
+      parts.length > 0 ? Prisma.sql`(${Prisma.join(parts, ' OR ')})` : Prisma.sql`FALSE`;
+    return { term, exact, predicate };
+  }
+
   async list(q: ProductQuery, actor: Actor): Promise<Paginated<unknown>> {
     const sellableFrom = await this.stock.sellableFrom();
     const conditions: Prisma.Sql[] = [];
@@ -115,29 +150,9 @@ export class ProductsService {
     if (q.categoryId) conditions.push(Prisma.sql`p.category_id = ${q.categoryId}::uuid`);
     if (q.laboratoryId) conditions.push(Prisma.sql`p.laboratory_id = ${q.laboratoryId}::uuid`);
     if (q.location) conditions.push(Prisma.sql`p.location ILIKE ${`%${q.location}%`}`);
-    const term = q.q ? normalizeSearch(q.q) : '';
-    if (q.q) {
-      const words = term.split(' ').filter(Boolean);
-      const likes =
-        words.length > 0
-          ? Prisma.join(
-              words.map((w) => Prisma.sql`p.search_text LIKE ${`%${w}%`}`),
-              ' AND ',
-            )
-          : Prisma.sql`FALSE`;
-      const likes2 =
-        words.length > 0
-          ? Prisma.join(
-              words.map((w) => Prisma.sql`p2.search_text LIKE ${`%${w}%`}`),
-              ' AND ',
-            )
-          : Prisma.sql`FALSE`;
-      conditions.push(Prisma.sql`(
-        (${likes})
-        OR (${term} <% p.search_text AND NOT EXISTS (SELECT 1 FROM products p2 WHERE ${likes2}))
-        OR EXISTS (SELECT 1 FROM product_barcodes b WHERE b.product_id = p.id AND b.barcode = ${q.q.trim()})
-        OR p.internal_code = ${q.q.trim().toUpperCase()})`);
-    }
+    const match = q.q ? await this.searchMatch(q.q) : null;
+    const term = match?.term ?? '';
+    if (match) conditions.push(match.predicate);
     if (q.stock === 'OUT') conditions.push(Prisma.sql`COALESCE(s.sellable, 0) <= 0`);
     if (q.stock === 'LOW')
       conditions.push(
@@ -209,36 +224,14 @@ export class ProductsService {
   ) {
     const query = raw.trim();
     if (!query) return [];
-    const term = normalizeSearch(query);
-    const words = term.split(' ').filter(Boolean);
-    const likes =
-      words.length > 0
-        ? Prisma.join(
-            words.map((w) => Prisma.sql`p.search_text LIKE ${`%${w}%`}`),
-            ' AND ',
-          )
-        : Prisma.sql`FALSE`;
-    const likes2 =
-      words.length > 0
-        ? Prisma.join(
-            words.map((w) => Prisma.sql`p2.search_text LIKE ${`%${w}%`}`),
-            ' AND ',
-          )
-        : Prisma.sql`FALSE`;
+    const match = await this.searchMatch(query);
     const active = options.includeInactive ? Prisma.empty : Prisma.sql`AND p.is_active`;
     const rows = await this.prisma.$queryRaw<{ id: string }[]>`
       SELECT p.id FROM products p
-      WHERE (
-        EXISTS (SELECT 1 FROM product_barcodes b WHERE b.product_id = p.id AND b.barcode = ${query})
-        OR p.internal_code = ${query.toUpperCase()}
-        OR (${likes})
-        OR (${term} <% p.search_text AND NOT EXISTS (SELECT 1 FROM products p2 WHERE ${likes2}))
-      ) ${active}
+      WHERE ${match.predicate} ${active}
       ORDER BY
-        EXISTS (SELECT 1 FROM product_barcodes b WHERE b.product_id = p.id AND b.barcode = ${query}) DESC,
-        (p.internal_code = ${query.toUpperCase()}) DESC,
-        (${likes}) DESC,
-        word_similarity(${term}, p.search_text) DESC,
+        (p.id = ANY(${match.exact}::uuid[])) DESC,
+        word_similarity(${match.term}, p.search_text) DESC,
         p.name ASC
       LIMIT ${options.limit ?? 20}`;
     const ids = rows.map((r) => r.id);

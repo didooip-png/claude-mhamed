@@ -524,6 +524,7 @@ export class StockQueriesService {
       pb AS (
         SELECT lb.product_id, SUM(lb.qty)::bigint AS qty, SUM(lb.qty * l.unit_cost_ht)::bigint AS value_cost, COUNT(*)::bigint AS lot_count
         FROM lb JOIN lots l ON l.id = lb.lot_id GROUP BY lb.product_id)`;
+    // Un seul passage sur les mouvements : la page et les totaux (fonctions de fenêtre).
     const rows = await this.prisma.$queryRaw<
       {
         id: string;
@@ -535,19 +536,25 @@ export class StockQueriesService {
         qty: bigint;
         value_cost: bigint;
         lot_count: bigint;
+        total_count: bigint;
+        total_value: bigint;
       }[]
     >`
       ${cte}
-      SELECT p.id, p.internal_code, p.name, p.dosage, p.units_per_pack, p.sell_by_unit, pb.qty, pb.value_cost, pb.lot_count
+      SELECT p.id, p.internal_code, p.name, p.dosage, p.units_per_pack, p.sell_by_unit, pb.qty, pb.value_cost, pb.lot_count,
+             COUNT(*) OVER ()::bigint AS total_count, (SUM(pb.value_cost) OVER ())::bigint AS total_value
       FROM pb JOIN products p ON p.id = pb.product_id
       WHERE TRUE ${where}
       ORDER BY p.name ASC LIMIT ${take} OFFSET ${skip}`;
-    const totals = await this.prisma.$queryRaw<
-      { count: bigint; qty: bigint | null; value_cost: bigint | null }[]
-    >`
-      ${cte}
-      SELECT COUNT(*)::bigint AS count, SUM(pb.qty)::bigint AS qty, SUM(pb.value_cost)::bigint AS value_cost
-      FROM pb JOIN products p ON p.id = pb.product_id WHERE TRUE ${where}`;
+    let totals = { count: num(rows[0]?.total_count), value: num(rows[0]?.total_value) };
+    if (rows.length === 0 && skip > 0) {
+      // Page au-delà de la fin : les fonctions de fenêtre n'ont aucune ligne à renseigner.
+      const t = await this.prisma.$queryRaw<{ count: bigint; value_cost: bigint | null }[]>`
+        ${cte}
+        SELECT COUNT(*)::bigint AS count, SUM(pb.value_cost)::bigint AS value_cost
+        FROM pb JOIN products p ON p.id = pb.product_id WHERE TRUE ${where}`;
+      totals = { count: num(t[0]?.count), value: num(t[0]?.value_cost) };
+    }
     const showCosts = actor.permissions.has('catalog.view_costs');
     return {
       ...paginated(
@@ -562,11 +569,11 @@ export class StockQueriesService {
           lotCount: num(r.lot_count),
           valueCost: showCosts ? num(r.value_cost) : null,
         })),
-        num(totals[0]?.count),
+        totals.count,
         q,
       ),
       date,
-      totals: { valueCost: showCosts ? num(totals[0]?.value_cost) : null },
+      totals: { valueCost: showCosts ? totals.value : null },
     };
   }
 
