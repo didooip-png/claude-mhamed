@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+dist
+coverage
+apps/api/src/generated
+apps/api/prisma/migrations
+CAHIER_DES_CHARGES_CLAUDE_CODE.md
+docs/SPEC.md

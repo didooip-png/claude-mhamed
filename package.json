@@ -1,0 +1,22 @@
+{
+  "name": "pharmastock",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PharmaStock — gestion de stock de médicaments (API NestJS + SPA React)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter ./packages/** --filter ./apps/** run build",
+    "dev": "pnpm --filter @pharmastock/shared build && pnpm -r --parallel --filter @pharmastock/shared --filter @pharmastock/api --filter @pharmastock/web run dev",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:migrate": "pnpm --filter @pharmastock/api run db:migrate",
+    "db:seed": "pnpm --filter @pharmastock/api run db:seed",
+    "db:reset": "pnpm --filter @pharmastock/api run db:reset"
+  }
+}
