@@ -19,7 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import * as React from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { FormField, MoneyInput, PercentInput } from '@/components/form';
 import { ErrorState, Field, PageHeader } from '@/components/page';
@@ -88,6 +88,8 @@ interface Receipt {
   totalTtc: number;
   attachmentId: string | null;
   attachment: { id: string; filename: string } | null;
+  purchaseOrderId: string | null;
+  purchaseOrder: { id: string; number: string | null; status: string } | null;
   version: number;
   createdAt: string;
   validatedAt: string | null;
@@ -103,7 +105,7 @@ interface Receipt {
 interface Warning {
   line: number;
   productName: string;
-  kind: 'EXPIRY_SOON' | 'PRICE_VARIANCE';
+  kind: 'EXPIRY_SOON' | 'PRICE_VARIANCE' | 'ORDER_OVERRUN' | 'NOT_ORDERED';
   message: string;
 }
 
@@ -179,6 +181,46 @@ function ReceiptEditor({ receipt }: { receipt: Receipt | null }) {
   const pickerRef = React.useRef<HTMLInputElement>(null);
   const today = todayIso(fmt.tz);
 
+  // Réception rattachée à une commande fournisseur : préremplie avec le reliquat à recevoir.
+  const [searchParams] = useSearchParams();
+  const orderId = receipt?.purchaseOrderId ?? searchParams.get('orderId');
+  const order = useQuery({
+    queryKey: ['purchase-orders', orderId],
+    queryFn: () =>
+      api.get<{
+        number: string | null;
+        supplier: { id: string; name: string };
+        lines: {
+          id: string;
+          remainingQty: number;
+          unitPriceHt: number;
+          product: ReceiptLine['product'] & { tvaRateBp: number };
+        }[];
+      }>(`/purchase-orders/${orderId}`),
+    enabled: !!orderId,
+  });
+  const prefilled = React.useRef(false);
+  React.useEffect(() => {
+    if (receipt || prefilled.current || !order.data) return;
+    prefilled.current = true;
+    setHeader((h) => ({ ...h, sourceType: 'SUPPLIER', supplierId: order.data.supplier.id }));
+    setLines(
+      order.data.lines
+        .filter((l) => l.remainingQty > 0)
+        .map((l) => ({
+          key: crypto.randomUUID(),
+          product: l.product,
+          lotNumber: '',
+          expiryText: '',
+          qty: l.remainingQty,
+          freeQty: 0,
+          unitPriceHt: l.unitPriceHt,
+          discountBp: 0,
+          tvaRateBp: l.product.tvaRateBp,
+        })),
+    );
+  }, [order.data, receipt]);
+
   const addProduct = (p: Product) => {
     const key = crypto.randomUUID();
     setLines((prev) => [
@@ -244,6 +286,7 @@ function ReceiptEditor({ receipt }: { receipt: Receipt | null }) {
     receivedAt: header.receivedAt,
     notes: header.notes || null,
     attachmentId: header.attachmentId,
+    purchaseOrderId: orderId ?? null,
     lines: lines.map((l) => ({
       productId: l.product.id,
       lotNumber: l.lotNumber,
@@ -384,6 +427,18 @@ function ReceiptEditor({ receipt }: { receipt: Receipt | null }) {
           </>
         }
       />
+      {orderId && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-200">
+          <span>
+            Réception rattachée à la commande{' '}
+            <Link to={`/purchase-orders/${orderId}`} className="font-mono font-medium underline">
+              {order.data?.number ?? receipt?.purchaseOrder?.number ?? '…'}
+            </Link>
+            {order.data ? ` (${order.data.supplier.name})` : ''} : les quantités sont contrôlées à
+            la validation.
+          </span>
+        </div>
+      )}
       <Card className="mb-4">
         <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-4">
           <FormField label="Source d’approvisionnement" required>

@@ -35,6 +35,7 @@ const productSelect = {
   unitsPerPack: true,
   sellByUnit: true,
   refPurchasePriceHt: true,
+  tvaRate: { select: { rateBp: true } },
 } satisfies Prisma.ProductSelect;
 
 const total = (lines: { qty: number; unitPriceHt: bigint | number }[]) =>
@@ -155,7 +156,17 @@ export class PurchaseOrdersService {
       cancelReason: order.cancelReason,
       lines: order.lines.map((l) => ({
         id: l.id,
-        product: { ...l.product, refPurchasePriceHt: num(l.product.refPurchasePriceHt) },
+        product: {
+          id: l.product.id,
+          internalCode: l.product.internalCode,
+          name: l.product.name,
+          dosage: l.product.dosage,
+          form: l.product.form,
+          unitsPerPack: l.product.unitsPerPack,
+          sellByUnit: l.product.sellByUnit,
+          refPurchasePriceHt: num(l.product.refPurchasePriceHt),
+          tvaRateBp: l.product.tvaRate.rateBp,
+        },
         qty: l.qty,
         receivedQty: l.receivedQty,
         remainingQty: Math.max(0, l.qty - l.receivedQty),

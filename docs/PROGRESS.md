@@ -145,7 +145,29 @@ e-mail à l'administrateur, rapport d'activité exact) — `test/stock-ops.test.
 `test/alerts-jobs.test.ts` (10 tests). La démonstration contient un inventaire validé, un inventaire en cours, des
 ajustements, des retours fournisseurs et une première passe des tâches planifiées.
 
-## Phase 5 — Statistiques, rapports, exports ⏳
+## Phase 5 — Statistiques, rapports, exports ✅
+
+- **Tableau de bord** (§6.1) : administrateur — CA du jour / de la semaine / du mois (TTC, HT, ventes, panier moyen, marge
+  et taux) avec comparaison à la période précédente, ventes des 30 derniers jours, encaissements du jour par mode, créances
+  et factures échues, valeur du stock au coût et au prix de vente, alertes (ruptures, seuil minimum, périmés, péremptions
+  à 30 / 60 / 90 jours, plafonds de crédit, écarts de caisse, annulations du jour), top 10 des produits du mois.
+  Préparateur — ses ventes du jour (sans marge), ventes en attente, alertes de stock, accès à la caisse.
+- **Centre de rapports** (§6.15) : 31 rapports partageant une même forme (indicateurs, graphique, tableau, totaux),
+  filtrables par période avec comparaison période précédente / année précédente : chiffre d'affaires, ventes par
+  utilisateur / client / catégorie / laboratoire / mode de paiement, carte de chaleur heure × jour, top produits, analyse
+  ABC, marges par produit et par catégorie, valeur du stock, rotation et couverture, produits dormants, lots à risque de
+  péremption, pertes, achats par fournisseur / produit / évolution des prix, retours par motif / utilisateur / produit,
+  annulations, balance âgée, principaux débiteurs, encaissements, écarts de caisse.
+- **Journaux et états réglementaires** : journal des ventes, des achats et des règlements, récapitulatif de TVA (collectée
+  nette des avoirs, déductible), registre des produits à tableau (client, prescripteur, ordonnance), traçabilité d'un lot.
+  Chaque rapport s'exporte en **Excel** et en **PDF** (tracé au mouchard) et s'imprime.
+- **Commandes fournisseurs** (§6.3) : brouillon saisi ou généré d'après les suggestions de réapprovisionnement, envoi au
+  fournisseur (numéro `BC-…`, PDF joint par e-mail, renvoi possible), réceptions rattachées avec **contrôle des quantités**
+  (excédent, produit non commandé), statuts envoyée / partiellement reçue / reçue, clôture du reliquat, annulation tracée.
+
+**Démonstration (critère de phase)** : chiffres des statistiques recoupés avec des calculs indépendants sur les ventes,
+retours et annulations réels (`test/reports.test.ts`, 8 tests), commandes et réceptions rattachées
+(`test/purchase-orders.test.ts`, 4 tests).
 
 ## Phase 6 — Durcissement et mise en recette ⏳
 

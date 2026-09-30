@@ -1,6 +1,6 @@
 import { formatStockQty, productLabel } from '@pharmastock/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Printer, Search, ShieldAlert, Truck } from 'lucide-react';
+import { Loader2, Printer, Search, ShieldAlert, ShoppingBasket, Truck } from 'lucide-react';
 import * as React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -310,6 +310,16 @@ export function ReorderPage() {
     return [...map.entries()].map(([key, g]) => ({ key, ...g }));
   }, [list.data]);
   const costs = can('catalog.view_costs');
+  const navigate = useNavigate();
+  const createOrder = useMutation({
+    mutationFn: (supplierId: string) =>
+      api.post<{ id: string }>('/purchase-orders/from-suggestions', { supplierId }),
+    onSuccess: (order) => {
+      toast.success('Brouillon de commande créé d’après les suggestions');
+      void navigate(`/purchase-orders/${order.id}`);
+    },
+    onError: (err) => toast.error(errorText(err)),
+  });
 
   return (
     <>
@@ -349,8 +359,21 @@ export function ReorderPage() {
         {groups.map((g) => (
           <Card key={g.key}>
             <CardHeader>
-              <CardTitle>
-                {g.name} <Badge variant="gray">{g.items.length}</Badge>
+              <CardTitle className="flex items-center justify-between gap-2">
+                <span>
+                  {g.name} <Badge variant="gray">{g.items.length}</Badge>
+                </span>
+                {can('orders.manage') && g.key !== 'none' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="print:hidden"
+                    disabled={createOrder.isPending}
+                    onClick={() => createOrder.mutate(g.key)}
+                  >
+                    <ShoppingBasket /> Créer la commande
+                  </Button>
+                )}
               </CardTitle>
             </CardHeader>
             <Table>

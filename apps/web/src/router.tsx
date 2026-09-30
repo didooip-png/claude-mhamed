@@ -111,6 +111,19 @@ const MyNotificationsPage = lazyPage(
   'MyNotificationsPage',
 );
 const JobsPage = lazyPage(() => import('@/pages/admin/jobs-page'), 'JobsPage');
+const ReportsPage = lazyPage(() => import('@/pages/reports/reports-page'), 'ReportsPage');
+const PurchaseOrdersPage = lazyPage(
+  () => import('@/pages/orders/order-pages'),
+  'PurchaseOrdersPage',
+);
+const PurchaseOrderEditPage = lazyPage(
+  () => import('@/pages/orders/order-pages'),
+  'PurchaseOrderEditPage',
+);
+const PurchaseOrderDetailPage = lazyPage(
+  () => import('@/pages/orders/order-pages'),
+  'PurchaseOrderDetailPage',
+);
 const PosPage = lazyPage(() => import('@/pages/sales/pos-page'), 'PosPage');
 const OnHoldPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'OnHoldPage');
 const SaleDetailPage = lazyPage(() => import('@/pages/sales/sales-pages'), 'SaleDetailPage');
@@ -300,6 +313,54 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'notifications', element: <NotificationsPage /> },
+      {
+        path: 'reports',
+        element: (
+          <RequirePermission anyOf={['reports.view']}>
+            <ReportsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'reports/:id',
+        element: (
+          <RequirePermission anyOf={['reports.view']}>
+            <ReportsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'purchase-orders',
+        element: (
+          <RequirePermission anyOf={['receipts.create']}>
+            <PurchaseOrdersPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'purchase-orders/new',
+        element: (
+          <RequirePermission anyOf={['orders.manage']}>
+            <PurchaseOrderEditPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'purchase-orders/:id',
+        element: (
+          <RequirePermission anyOf={['receipts.create']}>
+            <PurchaseOrderDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'purchase-orders/:id/edit',
+        element: (
+          <RequirePermission anyOf={['orders.manage']}>
+            <PurchaseOrderEditPage />
+          </RequirePermission>
+        ),
+      },
       {
         path: 'inventories',
         element: (

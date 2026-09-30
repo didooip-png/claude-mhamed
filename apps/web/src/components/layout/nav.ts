@@ -88,6 +88,7 @@ export const NAV: NavItem[] = [
         anyOf: ['supplier_returns.manage'],
       },
       { label: 'Réapprovisionnement', to: '/reorder', anyOf: ['receipts.create'] },
+      { label: 'Commandes fournisseurs', to: '/purchase-orders', anyOf: ['receipts.create'] },
     ],
   },
   {
@@ -191,6 +192,8 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/reorder',
   '/account/notifications',
   '/admin/jobs',
+  '/reports',
+  '/purchase-orders',
 ]);
 
 export const ACTIVITY_ICON = Activity;

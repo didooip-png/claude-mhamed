@@ -1,9 +1,11 @@
-import { addDaysIso } from '@pharmastock/shared';
+import { addDaysIso, addMonthsIso } from '@pharmastock/shared';
 import { setSeedClock } from '../../src/common/clock.js';
 import { AdjustmentsService } from '../../src/modules/adjustments/adjustments.service.js';
 import { InventoryService } from '../../src/modules/inventory/inventory.service.js';
 import { JobsService } from '../../src/modules/jobs/jobs.service.js';
+import { PurchaseOrdersService } from '../../src/modules/purchase-orders/purchase-orders.service.js';
 import { SupplierReturnsService } from '../../src/modules/supplier-returns/supplier-returns.service.js';
+import { supplierFor } from './demo.js';
 import type { SeedContext } from './history.js';
 
 /**
@@ -173,6 +175,71 @@ export async function seedStockOps(ctx: SeedContext): Promise<string> {
     }
   }
   if (n > 0) summary.push(`${n} retour(s) fournisseur`);
+
+  // --- Commandes fournisseurs : une commande partiellement reçue, un brouillon ---------
+  setSeedClock(ctx.at(ctx.today, 8, 30));
+  const orders = ctx.app.get(PurchaseOrdersService);
+  const supplierA = ctx.supplierIds[0]!;
+  const orderProducts = ctx.products.filter((p) => supplierFor(ctx, p) === supplierA).slice(0, 3);
+  if (orderProducts.length === 3) {
+    const order = await orders.create(
+      {
+        supplierId: supplierA,
+        expectedDate: addDaysIso(ctx.today, 3),
+        notes: 'Commande hebdomadaire',
+        lines: orderProducts.map((p) => ({ productId: p.id, qty: 10 })),
+      },
+      actors.admin,
+    );
+    await orders.send(order.id, { to: [], cc: [] }, actors.admin);
+    setSeedClock(ctx.at(ctx.today, 9, 20));
+    const first = orderProducts[0]!;
+    const draft = await ctx.receipts.createDraft(
+      {
+        sourceType: 'SUPPLIER',
+        supplierId: supplierA,
+        supplierInvoiceRef: `FV-${random.int(10000, 99999)}`,
+        supplierInvoiceDate: ctx.today,
+        receivedAt: ctx.today,
+        notes: 'Livraison partielle',
+        purchaseOrderId: order.id,
+        lines: [
+          {
+            productId: first.id,
+            lotNumber: `CMD${random.int(10000, 99999)}`,
+            expiryDate: addMonthsIso(ctx.today, 18),
+            qty: 6,
+            freeQty: 0,
+            unitPriceHt: first.purchaseHt,
+            discountBp: 0,
+            tvaRateBp: first.tvaBp,
+          },
+        ],
+        sourceReason: null,
+        attachmentId: null,
+      },
+      actors.admin,
+    );
+    await ctx.receipts.validate(
+      draft.id,
+      { acknowledgeWarnings: true, updateReferencePrices: false },
+      actors.admin,
+    );
+    summary.push('1 commande partiellement reçue');
+  }
+  const supplierB = ctx.supplierIds[1]!;
+  const draftProducts = ctx.products.filter((p) => supplierFor(ctx, p) === supplierB).slice(0, 2);
+  if (draftProducts.length === 2) {
+    await orders.create(
+      {
+        supplierId: supplierB,
+        notes: 'À envoyer lundi',
+        lines: draftProducts.map((p) => ({ productId: p.id, qty: 5 })),
+      },
+      actors.admin,
+    );
+    summary.push('1 commande en brouillon');
+  }
 
   // --- Tâches planifiées : première passe ----------------------------------------------
   setSeedClock(ctx.at(ctx.today, 21, 0));

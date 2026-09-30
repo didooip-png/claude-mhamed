@@ -661,6 +661,7 @@ const DOC_ROUTE: Record<string, string> = {
   return: '/returns',
   payment: '/payments',
   client: '/clients',
+  purchase_order: '/purchase-orders',
 };
 
 interface OutboxRow {

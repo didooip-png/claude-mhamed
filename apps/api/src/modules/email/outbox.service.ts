@@ -459,7 +459,7 @@ export class EmailOutboxService {
       items
         .filter((i) => i.relatedEntityType === type && i.relatedEntityId)
         .map((i) => i.relatedEntityId!);
-    const [sales, notes, payments] = await Promise.all([
+    const [sales, notes, payments, orders] = await Promise.all([
       this.prisma.sale.findMany({
         where: { id: { in: idsOf('sale') } },
         select: { id: true, number: true },
@@ -475,6 +475,10 @@ export class EmailOutboxService {
         where: { id: { in: idsOf('payment') } },
         select: { id: true, number: true },
       }),
+      this.prisma.purchaseOrder.findMany({
+        where: { id: { in: idsOf('purchase_order') } },
+        select: { id: true, number: true },
+      }),
     ]);
     const numberOf = (type: string | null, id: string | null) =>
       (type === 'sale'
@@ -483,7 +487,9 @@ export class EmailOutboxService {
           ? notes
           : type === 'payment'
             ? payments
-            : []
+            : type === 'purchase_order'
+              ? orders
+              : []
       ).find((x) => x.id === id)?.number ?? null;
     return paginated(
       items.map((i) => ({
