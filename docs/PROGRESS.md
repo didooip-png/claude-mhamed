@@ -96,7 +96,24 @@ refusée → administrateur annule → entrée au mouchard, stock réintégré) 
 facture PDF reçue par le serveur SMTP de test ; vente validée même SMTP coupé, e-mail réessayé puis envoyé au rétablissement
 (`test/sales.test.ts`, 17 tests). Parcours vérifié dans le navigateur (Playwright).
 
-## Phase 3 — Retours, avoirs, comptes clients, règlements ⏳
+## Phase 3 — Retours, avoirs, comptes clients, règlements ✅
+
+- **Retours clients** (RG-14) : assistant en 3 étapes (facture d'origine → lignes et lots → remboursement), contrôle des
+  quantités déjà retournées par ligne et par lot, arrondi proportionnel cumulé, timbre non remboursé. Destination selon
+  l'état : remise en stock, **quarantaine** (lot `<lot>-RET`) ou destruction (entrée puis perte) ; lot périmé toujours
+  non revendable. 🔑 requis pour un retour tardif, un produit non retournable ou l'approbation administrateur.
+- **Avoirs** `AV-…` : imputés d'abord sur la facture ouverte, l'excédent devient un crédit client ; remboursement en
+  espèces (administrateur, session de caisse ouverte) limité à cet excédent ; pas d'avoir pour le client comptoir.
+- **Règlements** (RG-16) `REG-…` : imputation automatique (FIFO), manuelle ou acompte, règlement d'avoirs sans
+  encaissement, annulation (contre-écriture en caisse), **chèques** (en portefeuille → déposé → encaissé / impayé),
+  balance âgée, relevé de compte, reçus A4 / ticket avec « DUPLICATA ».
+- **Fiche client** : onglets Ventes, Compte (mouvements et solde courant), Règlements, Avoirs, Relevé PDF / e-mail.
+- **Interface** : pages Retours (liste, fiche, assistant), Règlements (liste, chèques, balance âgée), boîte d'envoi par
+  e-mail réutilisable.
+- **Démonstration** : retours (avoirs imputés ou crédit), règlements partiels, chèques dont un impayé, usage du crédit.
+
+**Démonstration (critère de phase)** : scénarios 3 et 4 (retour partiel sur lot périmé puis quarantaine, avoir imputé ;
+règlements multiples, chèque impayé) et 14 autres cas (`test/returns-payments.test.ts`, 16 tests).
 
 ## Phase 4 — Caisse, inventaire, ajustements, retours fournisseurs, alertes ⏳
 

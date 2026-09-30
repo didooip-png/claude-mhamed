@@ -56,6 +56,22 @@ const EmailLogPage = lazyPage(() => import('@/pages/admin/email-pages'), 'EmailL
 const EmailSettingsPage = lazyPage(() => import('@/pages/admin/email-pages'), 'EmailSettingsPage');
 const CashPage = lazyPage(() => import('@/pages/cash/cash-pages'), 'CashPage');
 const CashSessionPage = lazyPage(() => import('@/pages/cash/cash-pages'), 'CashSessionPage');
+const ReturnsPage = lazyPage(() => import('@/pages/returns/returns-pages'), 'ReturnsPage');
+const ReturnDetailPage = lazyPage(
+  () => import('@/pages/returns/returns-pages'),
+  'ReturnDetailPage',
+);
+const ReturnWizardPage = lazyPage(
+  () => import('@/pages/returns/return-wizard'),
+  'ReturnWizardPage',
+);
+const PaymentsPage = lazyPage(() => import('@/pages/payments/payments-pages'), 'PaymentsPage');
+const PaymentDetailPage = lazyPage(
+  () => import('@/pages/payments/payments-pages'),
+  'PaymentDetailPage',
+);
+const ChequesPage = lazyPage(() => import('@/pages/payments/payments-pages'), 'ChequesPage');
+const AgingPage = lazyPage(() => import('@/pages/payments/payments-pages'), 'AgingPage');
 const NotificationsPage = lazyPage(
   () => import('@/pages/notifications/notifications'),
   'NotificationsPage',
@@ -189,6 +205,62 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission anyOf={['stock.view']}>
             <StockAtDatePage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'returns',
+        element: (
+          <RequirePermission anyOf={['returns.create']}>
+            <ReturnsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'returns/new',
+        element: (
+          <RequirePermission anyOf={['returns.create']}>
+            <ReturnWizardPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'returns/:id',
+        element: (
+          <RequirePermission anyOf={['returns.create']}>
+            <ReturnDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'payments',
+        element: (
+          <RequirePermission anyOf={['payments.create']}>
+            <PaymentsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'payments/cheques',
+        element: (
+          <RequirePermission anyOf={['payments.create']}>
+            <ChequesPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'payments/aging',
+        element: (
+          <RequirePermission anyOf={['payments.create']}>
+            <AgingPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'payments/:id',
+        element: (
+          <RequirePermission anyOf={['payments.create']}>
+            <PaymentDetailPage />
           </RequirePermission>
         ),
       },

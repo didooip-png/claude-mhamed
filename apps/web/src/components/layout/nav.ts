@@ -57,7 +57,7 @@ export const NAV: NavItem[] = [
     children: [
       { label: 'Encaissements', to: '/payments' },
       { label: 'Chèques', to: '/payments/cheques' },
-      { label: 'Échéancier', to: '/payments/aging' },
+      { label: 'Balance âgée', to: '/payments/aging' },
     ],
   },
   {
@@ -174,6 +174,10 @@ export const AVAILABLE_ROUTES = new Set<string>([
   '/cash',
   '/admin/email',
   '/admin/email-log',
+  '/returns',
+  '/payments',
+  '/payments/cheques',
+  '/payments/aging',
 ]);
 
 export const ACTIVITY_ICON = Activity;

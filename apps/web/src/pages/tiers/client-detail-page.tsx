@@ -13,9 +13,11 @@ import { useCan } from '@/lib/auth';
 import { useFormat } from '@/lib/format';
 import type { Client } from '@/lib/types';
 import { ClientFormDialog } from './client-form';
+import { ClientTabs } from './client-tabs';
+import type { AccountView } from '@/pages/returns/return-types';
 
-/** Fiche client — les onglets achats, retours, règlements et relevé s'ajoutent avec les phases 2 et 3. */
-export function ClientDetailPage({ children }: { children?: (client: Client) => React.ReactNode }) {
+/** Fiche client : compte, coordonnées, e-mails et onglets (factures ouvertes, relevé, achats, règlements, retours). */
+export function ClientDetailPage() {
   const { id = '' } = useParams();
   const fmt = useFormat();
   const can = useCan();
@@ -23,6 +25,11 @@ export function ClientDetailPage({ children }: { children?: (client: Client) => 
   const client = useQuery({
     queryKey: ['clients', id],
     queryFn: () => api.get<Client>(`/clients/${id}`),
+  });
+  const account = useQuery({
+    queryKey: ['clients', id, 'account'],
+    queryFn: () => api.get<AccountView>(`/clients/${id}/account`),
+    enabled: can('clients.view'),
   });
   if (client.error)
     return <ErrorState error={client.error} onRetry={() => void client.refetch()} />;
@@ -77,10 +84,33 @@ export function ClientDetailPage({ children }: { children?: (client: Client) => 
               <Field label="Plafond de crédit">
                 {c.creditLimit > 0 ? fmt.money(c.creditLimit) : 'Aucun'}
               </Field>
-              <Field label="Crédit disponible (plafond)">
+              <Field label="Crédit disponible (avoirs, acomptes)">
+                <span
+                  className={
+                    (account.data?.availableCredit ?? 0) > 0
+                      ? 'font-semibold text-emerald-700 dark:text-emerald-400'
+                      : ''
+                  }
+                >
+                  {fmt.money(account.data?.availableCredit ?? 0)}
+                </span>
+              </Field>
+              <Field label="Plafond restant">
                 {c.creditLimit > 0
-                  ? fmt.money(Math.max(0, c.creditLimit - Math.max(0, c.balance)))
+                  ? fmt.money(
+                      account.data?.creditRemaining ??
+                        Math.max(0, c.creditLimit - Math.max(0, c.balance)),
+                    )
                   : '—'}
+              </Field>
+              <Field label="Factures échues">
+                {(account.data?.overdueCount ?? 0) > 0 ? (
+                  <span className="font-medium text-destructive">
+                    {account.data!.overdueCount} · {fmt.money(account.data!.overdueAmount)}
+                  </span>
+                ) : (
+                  'Aucune'
+                )}
               </Field>
               <Field label="Remise habituelle">
                 {c.defaultDiscountBp > 0 ? fmt.percent(c.defaultDiscountBp) : '—'}
@@ -135,7 +165,7 @@ export function ClientDetailPage({ children }: { children?: (client: Client) => 
           </CardContent>
         </Card>
       </div>
-      {children?.(c)}
+      <ClientTabs client={c} />
       <ClientFormDialog
         client={c}
         open={editing}

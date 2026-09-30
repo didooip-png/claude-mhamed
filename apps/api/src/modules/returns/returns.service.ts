@@ -599,6 +599,8 @@ export class ReturnsService {
           kind: 'CREDIT_NOTE',
           entityType: 'credit_note',
           entityId: creditNote.id,
+          relatedEntityType: 'return',
+          relatedEntityId: ret.id,
           clientId,
           to: input.emailTo ? [input.emailTo] : undefined,
           manual: explicit,

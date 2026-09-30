@@ -19,6 +19,7 @@ import {
   Printer,
   ShoppingCart,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 import * as React from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -28,6 +29,7 @@ import { FormField, MoneyInput } from '@/components/form';
 import { isOverrideCancelled, withOverride } from '@/components/override-dialog';
 import { EmptyState, ErrorState, Field, PageHeader } from '@/components/page';
 import { ProductPicker } from '@/components/product-picker';
+import { SendEmailDialog } from '@/components/send-email-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,7 +42,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
-import { Checkbox, Skeleton } from '@/components/ui/misc';
+import { Skeleton } from '@/components/ui/misc';
 import { Table, TBody, TD, TFoot, TH, THead, TR } from '@/components/ui/table';
 import { api, errorText } from '@/lib/api';
 import { useCan } from '@/lib/auth';
@@ -48,6 +50,7 @@ import { useFormat } from '@/lib/format';
 import { platform } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 import { ClientSearch } from './pos-client';
+import type { ReturnRow } from '@/pages/returns/return-types';
 import { PAYMENT_STATUS_LABELS, type OnHoldSale, type SaleView } from './sale-types';
 
 interface SaleRow {
@@ -478,6 +481,12 @@ export function SaleDetailPage() {
     queryFn: () => api.get<{ operational: boolean }>('/email/status'),
     staleTime: 60_000,
   });
+  const returns = useQuery({
+    queryKey: ['returns', 'sale', id],
+    queryFn: () =>
+      api.get<Paginated<ReturnRow>>('/returns', { query: { saleId: id, pageSize: 50 } }),
+    enabled: !!id && can('returns.create'),
+  });
   if (sale.error) return <ErrorState error={sale.error} onRetry={() => void sale.refetch()} />;
   if (!sale.data) return <Skeleton className="h-96" />;
   const s = sale.data;
@@ -526,6 +535,15 @@ export function SaleDetailPage() {
                     <Mail />{' '}
                     {emails.data?.some((e) => e.status === 'SENT') ? 'Renvoyer' : 'Envoyer'} par
                     e-mail
+                  </Button>
+                )}
+              {can('returns.create') &&
+                s.status === 'VALIDATED' &&
+                s.returnStatus !== 'RETURNED' && (
+                  <Button variant="outline" asChild>
+                    <Link to={`/returns/new?saleId=${s.id}`}>
+                      <Undo2 /> Retourner des produits
+                    </Link>
                   </Button>
                 )}
               {can('sales.modify') && editable && (
@@ -712,6 +730,43 @@ export function SaleDetailPage() {
             </CardContent>
           </Card>
 
+          {returns.data && returns.data.items.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Retours et avoirs</CardTitle>
+              </CardHeader>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Retour</TH>
+                    <TH>Date</TH>
+                    <TH>Avoir</TH>
+                    <TH className="text-right">Montant</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {returns.data.items.map((r) => (
+                    <TR key={r.id}>
+                      <TD>
+                        <Link
+                          to={`/returns/${r.id}`}
+                          className="font-mono text-xs text-primary hover:underline"
+                        >
+                          {r.number}
+                        </Link>
+                      </TD>
+                      <TD className="tabular">{fmt.dateTime(r.createdAt)}</TD>
+                      <TD className="font-mono text-xs">
+                        {r.creditNote?.number ?? (r.refundMode === 'CASH' ? 'Espèces' : '—')}
+                      </TD>
+                      <TD className="text-right tabular">{fmt.money(r.totalTtc)}</TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </Card>
+          )}
+
           {emails.data && emails.data.length > 0 && (
             <Card>
               <CardHeader>
@@ -871,7 +926,9 @@ export function SaleDetailPage() {
       {dialog === 'modify' && <ModifySaleDialog sale={s} onClose={() => setDialog(null)} />}
       {dialog === 'email' && (
         <SendEmailDialog
-          sale={s}
+          title={`Envoyer la facture ${s.number} par e-mail`}
+          endpoint={`/sales/${s.id}/email`}
+          client={s.client}
           onClose={() => setDialog(null)}
           onDone={() => {
             void emails.refetch();
@@ -1289,96 +1346,6 @@ function ModifySaleDialog({ sale, onClose }: { sale: SaleView; onClose: () => vo
             onClick={() => void submit()}
           >
             Enregistrer la modification
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Envoyer / renvoyer la facture par e-mail : destinataire, copie et message modifiables (§6.19 C). */
-function SendEmailDialog({
-  sale,
-  onClose,
-  onDone,
-}: {
-  sale: SaleView;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [to, setTo] = React.useState(sale.client?.email ?? '');
-  const [cc, setCc] = React.useState('');
-  const [message, setMessage] = React.useState('');
-  const [confirm, setConfirm] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-  const consent = !!sale.client?.emailConsent;
-  const split = (v: string) =>
-    v
-      .split(/[,;\s]+/)
-      .map((x) => x.trim())
-      .filter(Boolean);
-  const submit = async () => {
-    setBusy(true);
-    try {
-      await api.post(`/sales/${sale.id}/email`, {
-        to: split(to),
-        cc: split(cc),
-        message: message.trim() || null,
-        confirmNoConsent: confirm,
-      });
-      toast.success('E-mail mis en file d’envoi.');
-      onDone();
-      onClose();
-    } catch (err) {
-      toast.error(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader>
-          <DialogTitle>Envoyer la facture {sale.number} par e-mail</DialogTitle>
-          <DialogDescription>
-            Le PDF est joint ; le corps de l’e-mail ne mentionne aucun médicament.
-          </DialogDescription>
-        </DialogHeader>
-        <FormField label="Destinataire(s)" required>
-          <Input value={to} onChange={(e) => setTo(e.target.value)} aria-label="Destinataires" />
-        </FormField>
-        <FormField label="Copie" hint="Séparez plusieurs adresses par une virgule.">
-          <Input value={cc} onChange={(e) => setCc(e.target.value)} aria-label="Copie" />
-        </FormField>
-        <FormField label="Message (facultatif)">
-          <Textarea
-            rows={3}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            aria-label="Message"
-          />
-        </FormField>
-        {!consent && (
-          <label className="flex items-start gap-2 rounded-md bg-amber-50 p-2 text-sm dark:bg-amber-950/40">
-            <Checkbox
-              checked={confirm}
-              onCheckedChange={(v) => setConfirm(v === true)}
-              className="mt-0.5"
-            />
-            Ce client n’a pas donné son consentement à l’envoi par e-mail. Je confirme l’envoi à sa
-            demande.
-          </label>
-        )}
-        <DialogFooter>
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            Annuler
-          </Button>
-          <Button
-            loading={busy}
-            disabled={split(to).length === 0 || (!consent && !confirm)}
-            onClick={() => void submit()}
-          >
-            <Mail /> Envoyer
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -814,7 +814,24 @@ describe('E-mails des avoirs, reçus et relevés', () => {
       .expect(200);
     await t.post('/email/smtp/test-connection', admin).expect(200);
   });
-  afterAll(() => smtp.stop());
+  afterAll(async () => {
+    // Les fichiers de test partagent la base : on rend le SMTP inactif pour les suivants.
+    await t
+      .put('/email/smtp', admin, {
+        enabled: false,
+        host: '',
+        port: 587,
+        security: 'STARTTLS',
+        username: '',
+        fromName: '',
+        fromEmail: '',
+        replyTo: '',
+        bccArchive: '',
+        hourlyLimit: 100,
+      })
+      .expect(200);
+    await smtp.stop();
+  });
 
   it('envoie automatiquement l’avoir et le reçu (PDF joint) aux clients consentants, sans nom de médicament', async () => {
     const p = await twoLotProduct(2, 30, { name: `Produit Confidentiel ${uniq()}` });

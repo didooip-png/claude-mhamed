@@ -221,15 +221,16 @@ export class EmailOutboxService {
       } else if (input.entityType === 'credit_note') {
         const note = await tx.creditNote.findUnique({
           where: { id: input.entityId },
-          select: { id: true, number: true, clientId: true },
+          select: { id: true, number: true, clientId: true, returnId: true },
         });
         if (!note) throw new AppError('NOT_FOUND');
         target = {
           clientId: note.clientId,
           kind: 'CREDIT_NOTE',
           label: `Avoir ${note.number}`,
-          relatedType: 'credit_note',
-          relatedId: note.id,
+          // Le journal renvoie vers la fiche du retour.
+          relatedType: note.returnId ? 'return' : 'credit_note',
+          relatedId: note.returnId ?? note.id,
         };
       } else if (input.entityType === 'payment') {
         const payment = await tx.payment.findUnique({
@@ -463,10 +464,13 @@ export class EmailOutboxService {
         where: { id: { in: idsOf('sale') } },
         select: { id: true, number: true },
       }),
-      this.prisma.creditNote.findMany({
-        where: { id: { in: idsOf('credit_note') } },
-        select: { id: true, number: true },
-      }),
+      // Un e-mail d'avoir est rattaché à son retour : on affiche le numéro de l'avoir.
+      this.prisma.creditNote
+        .findMany({
+          where: { returnId: { in: idsOf('return') } },
+          select: { returnId: true, number: true },
+        })
+        .then((rows) => rows.map((r) => ({ id: r.returnId!, number: r.number }))),
       this.prisma.payment.findMany({
         where: { id: { in: idsOf('payment') } },
         select: { id: true, number: true },
@@ -475,7 +479,7 @@ export class EmailOutboxService {
     const numberOf = (type: string | null, id: string | null) =>
       (type === 'sale'
         ? sales
-        : type === 'credit_note'
+        : type === 'return'
           ? notes
           : type === 'payment'
             ? payments

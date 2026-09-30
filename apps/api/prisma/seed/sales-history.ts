@@ -1,8 +1,11 @@
-import type { PaymentInput } from '@pharmastock/shared';
+import { addDaysIso, type PaymentInput, type RecordPaymentData } from '@pharmastock/shared';
 import { setSeedClock } from '../../src/common/clock.js';
 import type { Actor } from '../../src/common/request-context.js';
+import { LedgerService } from '../../src/modules/accounts/ledger.service.js';
 import { CashService } from '../../src/modules/cash/cash.service.js';
 import { DocumentsService } from '../../src/modules/documents/documents.service.js';
+import { PaymentsService } from '../../src/modules/payments/payments.service.js';
+import { ReturnsService } from '../../src/modules/returns/returns.service.js';
 import { SalesService } from '../../src/modules/sales/sales.service.js';
 import { SettingsService } from '../../src/modules/settings/settings.service.js';
 import type { SeedContext } from './history.js';
@@ -30,22 +33,38 @@ export class SalesHistory {
   private readonly cash: CashService;
   private readonly documents: DocumentsService;
   private readonly settings: SettingsService;
+  private readonly returns: ReturnsService;
+  private readonly payments: PaymentsService;
+  private readonly ledger: LedgerService;
   private admin2: Actor;
   private day = 0;
   private sellable = new Map<string, number>();
-  private stats = { sales: 0, cancelled: 0, modified: 0, discarded: 0, closed: 0 };
+  private stats = {
+    sales: 0,
+    cancelled: 0,
+    modified: 0,
+    discarded: 0,
+    closed: 0,
+    returns: 0,
+    payments: 0,
+    cheques: 0,
+    bounced: 0,
+  };
 
   constructor(private readonly ctx: SeedContext) {
     this.sales = ctx.app.get(SalesService);
     this.cash = ctx.app.get(CashService);
     this.documents = ctx.app.get(DocumentsService);
     this.settings = ctx.app.get(SettingsService);
+    this.returns = ctx.app.get(ReturnsService);
+    this.payments = ctx.app.get(PaymentsService);
+    this.ledger = ctx.app.get(LedgerService);
     this.admin2 = ctx.actors.admin2;
   }
 
   get summary(): string {
     const s = this.stats;
-    return `${s.sales} ventes (${s.cancelled} annulées, ${s.modified} modifiées), ${s.discarded} paniers abandonnés, ${s.closed} caisses clôturées`;
+    return `${s.sales} ventes (${s.cancelled} annulées, ${s.modified} modifiées), ${s.discarded} paniers abandonnés, ${s.returns} retours, ${s.payments} règlements (${s.cheques} chèques dont ${s.bounced} impayé(s)), ${s.closed} caisses clôturées`;
   }
 
   private actor(who: Cashier): Actor {
@@ -123,6 +142,20 @@ export class SalesHistory {
       const who: Cashier = random.chance(0.62) ? 'pre1' : 'pre2';
       events.push({ minutes, run: () => this.oneSale(day, minutes, who, events, closeAt) });
     }
+    // Règlements de comptes clients et retours (avoirs), au fil de la journée.
+    const late = closeAt - 30;
+    if (random.chance(0.55)) {
+      for (let i = random.int(1, 2); i > 0; i -= 1) {
+        const minutes = openAt + random.int(150, Math.max(160, late - openAt));
+        events.push({ minutes, run: () => this.customerPayment(day, minutes) });
+      }
+    }
+    if (random.chance(0.3)) {
+      const minutes = openAt + random.int(120, Math.max(130, late - openAt));
+      const who: Cashier = random.chance(0.6) ? 'pre1' : 'pre2';
+      events.push({ minutes, run: () => this.customerReturn(day, minutes, who) });
+    }
+    await this.chequeLifecycle(day, openAt + 25);
     // Sorties de caisse (dépenses) faites par l'administrateur.
     if (random.chance(0.12)) {
       const minutes = openAt + random.int(120, 300);
@@ -303,11 +336,15 @@ export class SalesHistory {
     }
 
     const total = sale.totals.totalTtc;
-    const payments = await this.paymentsFor(total, client.id, clientData);
+    // Avoir / acompte disponible : souvent utilisé pour régler l'achat suivant.
+    const available = (await this.ledger.summary(client.id)).availableCredit;
+    const useCredit = available > 0 && random.chance(0.7) ? Math.min(available, total) : 0;
+    const payments =
+      useCredit >= total ? [] : await this.paymentsFor(total - useCredit, client.id, clientData);
     this.setClock(day, minutes + random.int(1, 4));
     const result = await this.sales.validate(
       sale.id,
-      { payments, useCredit: 0, document: 'NONE' },
+      { payments, useCredit, document: 'NONE' },
       `seed-${day}-${minutes}-${who}-${this.stats.sales}`,
       actor,
     );
@@ -395,6 +432,150 @@ export class SalesHistory {
         },
       });
     }
+  }
+
+  /** Règlement d'un compte client (virement, chèque, espèces, carte) lettré sur les factures les plus anciennes. */
+  private async customerPayment(day: string, minutes: number): Promise<void> {
+    const { random, prisma } = this.ctx;
+    const debtors = await prisma.client.findMany({
+      where: { balance: { gt: 0 }, isWalkIn: false },
+      select: { id: true, type: true, balance: true },
+    });
+    if (debtors.length === 0) return;
+    const c = random.pick(debtors);
+    const balance = Number(c.balance);
+    const amount = random.chance(0.55)
+      ? balance
+      : Math.max(1000, Math.round((balance * random.int(3, 8)) / 100) * 10);
+    if (amount <= 0 || amount > balance) return;
+    const who: Cashier = random.chance(0.6) ? 'pre1' : 'pre2';
+    const pro = c.type !== 'INDIVIDUAL';
+    const r = random.next();
+    const method = pro
+      ? r < 0.4
+        ? 'TRANSFER'
+        : r < 0.85
+          ? 'CHEQUE'
+          : 'CARD'
+      : r < 0.6
+        ? 'CASH'
+        : r < 0.85
+          ? 'CARD'
+          : 'CHEQUE';
+    const base: RecordPaymentData = {
+      clientId: c.id,
+      method,
+      amount,
+      allocation: 'AUTO',
+      items: [],
+      notes: null,
+    };
+    const body: RecordPaymentData =
+      method === 'CHEQUE'
+        ? {
+            ...base,
+            chequeNumber: String(random.int(1_000_000, 9_999_999)),
+            bank: random.pick(BANKS),
+            dueDate: addDaysIso(day, random.int(5, 60)),
+          }
+        : method === 'TRANSFER'
+          ? { ...base, reference: `VIR-${random.int(100000, 999999)}` }
+          : base;
+    this.setClock(day, minutes);
+    await this.payments.record(body, undefined, this.actor(who));
+    this.stats.payments += 1;
+    if (method === 'CHEQUE') this.stats.cheques += 1;
+  }
+
+  /** Cycle de vie des chèques : remis en banque à l'échéance, puis encaissés ou (rarement) impayés. */
+  private async chequeLifecycle(day: string, minutes: number): Promise<void> {
+    const { random, prisma } = this.ctx;
+    const due = await prisma.payment.findMany({
+      where: {
+        method: 'CHEQUE',
+        status: 'VALID',
+        chequeStatus: { in: ['IN_PORTFOLIO', 'DEPOSITED'] },
+        dueDate: { lte: new Date(`${day}T00:00:00Z`) },
+      },
+      select: { id: true, chequeStatus: true, dueDate: true },
+      orderBy: { dueDate: 'asc' },
+    });
+    for (const p of due) {
+      this.setClock(day, minutes + random.int(0, 20));
+      if (p.chequeStatus === 'IN_PORTFOLIO') {
+        await this.payments.setChequeStatus(p.id, 'DEPOSITED', this.ctx.actors.pre1);
+      } else if (p.dueDate && p.dueDate.toISOString().slice(0, 10) <= addDaysIso(day, -3)) {
+        if (random.chance(0.07)) {
+          await this.payments.bounce(p.id, 'Provision insuffisante', this.ctx.actors.admin);
+          this.stats.bounced += 1;
+        } else await this.payments.setChequeStatus(p.id, 'CASHED', this.ctx.actors.pre1);
+      }
+    }
+  }
+
+  /** Retour client sur une vente récente : avoir (ou remboursement en espèces), état du produit varié. */
+  private async customerReturn(day: string, minutes: number, who: Cashier): Promise<void> {
+    const { random, prisma } = this.ctx;
+    const at = this.ctx.at(day, Math.floor(minutes / 60), minutes % 60);
+    const candidates = await prisma.sale.findMany({
+      where: {
+        status: 'VALIDATED',
+        returnStatus: 'NONE',
+        validatedAt: { gte: new Date(at.getTime() - 25 * 86_400_000), lt: at },
+        client: { isWalkIn: false },
+      },
+      select: { id: true },
+      orderBy: { validatedAt: 'desc' },
+      take: 40,
+    });
+    if (candidates.length === 0) return;
+    const saleId = random.pick(candidates).id;
+    const admin = this.adminFor(who);
+    const info = await this.returns.returnable(saleId, admin);
+    const lines = info.lines.filter((l) => !l.notReturnable && l.returnableQtyBase > 0);
+    if (lines.length === 0) return;
+    const line = random.pick(lines);
+    const lot = line.lots.find((l) => l.returnableQtyBase > 0)!;
+    const factor = line.product.sellByUnit && line.unit === 'PACK' ? line.product.unitsPerPack : 1;
+    if (lot.returnableQtyBase < factor) return;
+    const r = random.next();
+    const cash = random.chance(0.12);
+    const body = {
+      saleId,
+      reason: random.pick([
+        'Produit non utilisé',
+        'Erreur de délivrance',
+        'Traitement arrêté par le médecin',
+        'Boîte abîmée',
+        'Doublon avec une autre ordonnance',
+      ]),
+      refundMode: cash ? ('CASH' as const) : ('CREDIT' as const),
+      entries: [
+        {
+          saleLineId: line.id,
+          lotId: lot.lotId,
+          qty: 1,
+          unit: line.unit,
+          condition: lot.expired
+            ? ('QUARANTINE' as const)
+            : r < 0.85
+              ? ('RESELLABLE' as const)
+              : r < 0.95
+                ? ('QUARANTINE' as const)
+                : ('DESTROY' as const),
+        },
+      ],
+    };
+    const byAdmin = cash || random.chance(0.4);
+    this.setClock(day, minutes);
+    await this.returns.create(
+      byAdmin
+        ? body
+        : { ...body, override: { ...OVERRIDE, reason: 'Retour accepté par l’administrateur' } },
+      undefined,
+      byAdmin ? admin : this.actor(who),
+    );
+    this.stats.returns += 1;
   }
 
   private adminFor(who: Cashier): Actor {

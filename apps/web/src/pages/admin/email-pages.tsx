@@ -656,6 +656,13 @@ function TemplatesEditor() {
   );
 }
 
+const DOC_ROUTE: Record<string, string> = {
+  sale: '/sales',
+  return: '/returns',
+  payment: '/payments',
+  client: '/clients',
+};
+
 interface OutboxRow {
   id: string;
   kind: string;
@@ -717,9 +724,9 @@ export function EmailLogPage() {
       id: 'document',
       header: 'Document',
       cell: ({ row }) =>
-        row.original.relatedEntityType === 'sale' && row.original.relatedEntityId ? (
+        row.original.relatedEntityId && DOC_ROUTE[row.original.relatedEntityType ?? ''] ? (
           <Link
-            to={`/sales/${row.original.relatedEntityId}`}
+            to={`${DOC_ROUTE[row.original.relatedEntityType!]}/${row.original.relatedEntityId}`}
             className="font-mono text-xs text-primary hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
