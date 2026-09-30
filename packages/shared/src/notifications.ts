@@ -25,6 +25,8 @@ export interface NotifiableEventDefinition {
   critical?: boolean;
   /** Événement déclenché par un employé (filtre « employés suivis » applicable). */
   employee?: boolean;
+  /** Rapport périodique (pas d'événement) : uniquement cloche ou résumé quotidien / hebdomadaire. */
+  digestOnly?: boolean;
 }
 
 const e = (
@@ -113,6 +115,9 @@ const events = {
   LOGIN_FAILED: e('activity', 'Échec de connexion', 'OFF', { employee: true }),
   ACCOUNT_LOCKED: e('activity', 'Compte verrouillé', 'IN_APP', { employee: true }),
   DEVICE_REGISTERED: e('activity', 'Nouveau poste en attente d’approbation', 'IN_APP'),
+  ACTIVITY_REPORT: e('activity', 'Rapport d’activité par employé', 'EMAIL_DAILY', {
+    digestOnly: true,
+  }),
   // Stock
   STOCK_OUT: e('stock', 'Rupture de stock', 'EMAIL_DAILY'),
   STOCK_LOW: e('stock', 'Passage sous le seuil minimum', 'IN_APP'),
@@ -154,4 +159,21 @@ export function isNotifiableEvent(type: string): type is NotifiableEventType {
 export interface NotificationThresholds {
   minAmount?: number;
   minDiscountBp?: number;
+}
+
+/** Heure d'envoi d'un résumé : jour de semaine (lundi = 0) pour l'hebdomadaire. */
+export interface NotificationSchedule {
+  hour?: number;
+  minute?: number;
+  weekday?: number;
+}
+
+/** Heure par défaut des résumés : 20 h 00, le lundi pour l'hebdomadaire. */
+export const DEFAULT_DIGEST_SCHEDULE = { hour: 20, minute: 0, weekday: 0 } as const;
+
+/** Modes autorisés pour un événement (les rapports n'ont pas d'envoi immédiat). */
+export function allowedModes(def: NotifiableEventDefinition): NotificationMode[] {
+  return def.digestOnly
+    ? ['OFF', 'IN_APP', 'EMAIL_DAILY']
+    : ['OFF', 'IN_APP', 'EMAIL_IMMEDIATE', 'EMAIL_DAILY', 'EMAIL_WEEKLY'];
 }

@@ -34,6 +34,11 @@ const events = {
   RECEIPT_DRAFT_DISCARDED: { severity: 'INFO', label: 'Brouillon de réception abandonné' },
   RECEIPT_CANCELLED: { severity: 'CRITICAL', label: 'Réception annulée' },
   SUPPLIER_RETURN: { severity: 'WARNING', label: 'Retour fournisseur' },
+  JOB_RUN_MANUALLY: { severity: 'INFO', label: 'Tâche planifiée lancée manuellement' },
+  NOTIFICATION_PREFERENCES_CHANGED: {
+    severity: 'INFO',
+    label: 'Préférences de notification modifiées',
+  },
   SUPPLIER_CREDIT_RECEIVED: { severity: 'INFO', label: 'Avoir fournisseur reçu' },
   SUPPLIER_RETURN_CANCELLED: { severity: 'WARNING', label: 'Retour fournisseur annulé' },
   INVENTORY_COUNT_CHANGED: { severity: 'INFO', label: 'Comptage d’inventaire modifié' },

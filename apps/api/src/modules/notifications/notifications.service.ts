@@ -8,6 +8,7 @@ import {
   startOfLocalDay,
   todayIso,
   type NotificationMode,
+  type NotificationSchedule,
   type NotificationThresholds,
   type PaginationQuery,
   type SettingsMap,
@@ -23,7 +24,7 @@ import { EmailOutboxService, isSafeEmail } from '../email/outbox.service.js';
 import { SmtpService } from '../email/smtp.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 
-interface Recipient {
+export interface Recipient {
   id: string;
   code: string;
   email: string | null;
@@ -34,6 +35,7 @@ interface Recipient {
       watchedUserIds: string[];
       thresholds: NotificationThresholds;
       outsideHoursOnly: boolean;
+      schedule: NotificationSchedule;
     }
   >;
 }
@@ -112,7 +114,7 @@ export class NotificationsService {
           orderBy: { id: 'asc' },
         });
         const settings = await this.settings.all(tx);
-        const recipients = await this.recipients(tx);
+        const recipients = await this.loadRecipients(tx);
         const smtpOk = await this.smtp.isOperational();
         for (const event of events) {
           await this.dispatch(tx, event, recipients, settings, smtpOk);
@@ -130,7 +132,7 @@ export class NotificationsService {
   }
 
   /** Utilisateurs actifs autorisés à recevoir les notifications, avec leurs abonnements. */
-  private async recipients(tx: Tx): Promise<Recipient[]> {
+  async loadRecipients(tx: Tx): Promise<Recipient[]> {
     const users = await tx.user.findMany({
       // Le rôle administrateur système possède implicitement toutes les permissions.
       where: {
@@ -154,6 +156,7 @@ export class NotificationsService {
             watchedUserIds: s.watchedUserIds,
             thresholds: (s.thresholds ?? {}) as NotificationThresholds,
             outsideHoursOnly: s.outsideHoursOnly,
+            schedule: (s.schedule ?? {}) as NotificationSchedule,
           },
         ]),
       ),

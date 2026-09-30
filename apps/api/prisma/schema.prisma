@@ -1310,6 +1310,8 @@ model NotificationSubscription {
   watchedUserIds String[]         @default([]) @map("watched_user_ids") @db.Uuid
   thresholds     Json             @default("{}")
   outsideHoursOnly Boolean        @default(false) @map("outside_hours_only")
+  // Heure d'envoi des résumés : { hour: 0-23, minute?: 0-59, weekday?: 0-6 (lundi = 0) }.
+  schedule       Json             @default("{}")
   updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1405,4 +1407,21 @@ model Backup {
 
   @@index([startedAt])
   @@map("backups")
+}
+
+/// Exécutions des tâches planifiées (une par tâche et par période : jamais deux fois).
+model JobRun {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  periodKey  String    @map("period_key")
+  startedAt  DateTime  @default(now()) @map("started_at") @db.Timestamptz(3)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(3)
+  status     String    @default("RUNNING")
+  trigger    String    @default("SCHEDULE")
+  detail     Json?
+  triggeredById String? @map("triggered_by") @db.Uuid
+
+  @@unique([name, periodKey])
+  @@index([name, startedAt])
+  @@map("job_runs")
 }

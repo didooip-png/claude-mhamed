@@ -58,6 +58,13 @@ import { ReturnsService } from './modules/returns/returns.service.js';
 import { SalesQueriesService } from './modules/sales/sales-queries.service.js';
 import { SalesController } from './modules/sales/sales.controller.js';
 import { SalesService } from './modules/sales/sales.service.js';
+import { JobsController } from './modules/jobs/jobs.controller.js';
+import { JobsService } from './modules/jobs/jobs.service.js';
+import { ActivityReportService } from './modules/notifications/activity-report.service.js';
+import { DigestService } from './modules/notifications/digest.service.js';
+import { PreferencesService } from './modules/notifications/preferences.service.js';
+import { ReorderController } from './modules/stock/reorder.controller.js';
+import { ReorderService } from './modules/stock/reorder.service.js';
 import { AdjustmentsController } from './modules/adjustments/adjustments.controller.js';
 import { AdjustmentsService } from './modules/adjustments/adjustments.service.js';
 import { InventoryController } from './modules/inventory/inventory.controller.js';
@@ -134,6 +141,8 @@ const config = loadConfig();
     AdjustmentsController,
     SupplierReturnsController,
     RecallController,
+    ReorderController,
+    JobsController,
   ],
   providers: [
     UsersService,
@@ -164,6 +173,11 @@ const config = loadConfig();
     AdjustmentsService,
     SupplierReturnsService,
     RecallService,
+    ReorderService,
+    ActivityReportService,
+    PreferencesService,
+    DigestService,
+    JobsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SecurityGuard },
     { provide: APP_INTERCEPTOR, useClass: OverrideAuditInterceptor },

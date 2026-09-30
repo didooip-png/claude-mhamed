@@ -15,3 +15,4 @@ export * from './schemas/sales.js';
 export * from './notifications.js';
 export * from './schemas/accounts.js';
 export * from './schemas/stock-ops.js';
+export * from './schemas/notifications.js';

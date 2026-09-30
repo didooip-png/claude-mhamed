@@ -9,6 +9,7 @@ import type {
   StockMovementType,
 } from '../../generated/prisma/client.js';
 import type { Tx } from '../../prisma/prisma.service.js';
+import { EventsService } from '../events/events.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 
 export interface LockedLot {
@@ -52,7 +53,10 @@ export interface MovementInput {
  */
 @Injectable()
 export class StockService {
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    private readonly events: EventsService,
+  ) {}
 
   /** Verrouille les produits dans un ordre déterministe (évite les interblocages entre postes). */
   async lockProducts(tx: Tx, productIds: string[]): Promise<void> {
@@ -133,6 +137,35 @@ export class StockService {
         createdAt: input.at ?? now(),
       },
     });
+    if (input.qty < 0) await this.stockLevelAlert(tx, input, productBalanceAfter);
     return { lotBalanceAfter: lot.remaining_qty, productBalanceAfter };
+  }
+
+  /** Rupture (stock à 0) ou passage sous le seuil minimum : événement notifiable, une fois par franchissement. */
+  private async stockLevelAlert(tx: Tx, input: MovementInput, after: number): Promise<void> {
+    const before = after - input.qty;
+    if (before <= 0) return;
+    const product = await tx.product.findUnique({
+      where: { id: input.lot.product_id },
+      select: { id: true, name: true, internalCode: true, minStock: true },
+    });
+    if (!product) return;
+    const out = after === 0;
+    const low =
+      !out && product.minStock > 0 && after <= product.minStock && before > product.minStock;
+    if (!out && !low) return;
+    await this.events.emit(tx, {
+      eventType: out ? 'STOCK_OUT' : 'STOCK_LOW',
+      severity: out ? 'WARNING' : 'INFO',
+      actorId: input.actor.userId,
+      title: out ? `Rupture de stock : ${product.name}` : `Stock bas : ${product.name}`,
+      body: out
+        ? `${product.name} (${product.internalCode}) n’a plus de stock.`
+        : `${product.name} (${product.internalCode}) : ${after} unité(s) restantes, seuil minimum ${product.minStock}.`,
+      entityType: 'product',
+      entityId: product.id,
+      link: `/catalog/products/${product.id}`,
+      data: { userCode: input.actor.userCode, userName: input.actor.userName, stock: after },
+    });
   }
 }
