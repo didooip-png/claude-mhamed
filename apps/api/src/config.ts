@@ -23,8 +23,13 @@ const envSchema = z.object({
   STORAGE_DIR: z.string().default('./storage'),
   BACKUP_DIR: z.string().default('./storage/backups'),
   BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
-  BACKUP_CRON: z.string().default('0 30 2 * * *'),
+  /** Heure locale (HH:MM) de la sauvegarde quotidienne. */
+  BACKUP_TIME: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: 'BACKUP_TIME : HH:MM' })
+    .default('01:30'),
   PG_DUMP_PATH: z.string().default('pg_dump'),
+  PG_RESTORE_PATH: z.string().default('pg_restore'),
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().default('auto'),

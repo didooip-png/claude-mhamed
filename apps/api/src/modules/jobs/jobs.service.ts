@@ -16,6 +16,7 @@ import { loadConfig } from '../../config.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { BackupService } from '../backups/backup.service.js';
 import { EmailOutboxService, isSafeEmail } from '../email/outbox.service.js';
 import { SmtpService } from '../email/smtp.service.js';
 import { EventsService, type DomainEventInput } from '../events/events.service.js';
@@ -61,9 +62,28 @@ export class JobsService {
     private readonly outbox: EmailOutboxService,
     private readonly smtp: SmtpService,
     private readonly reorder: ReorderService,
+    private readonly backups: BackupService,
   ) {}
 
   private readonly jobs: JobDefinition[] = [
+    {
+      name: 'database-backup',
+      label: 'Sauvegarde de la base',
+      description:
+        'Sauvegarde complète (pg_dump compressé, vérifiée), copie hors site si configurée, purge des archives au-delà de la durée de conservation. Échec : alerte critique.',
+      schedule: (() => {
+        const [hour, minute] = loadConfig().BACKUP_TIME.split(':').map(Number);
+        return { kind: 'daily' as const, hour: hour ?? 1, minute: minute ?? 30 };
+      })(),
+      run: async () => {
+        const b = await this.backups.run('SCHEDULE');
+        return {
+          filename: b.filename,
+          sizeBytes: Number(b.sizeBytes ?? 0),
+          offsite: b.offsiteStatus,
+        };
+      },
+    },
     {
       name: 'stock-consistency',
       label: 'Cohérence du stock (RG-22)',

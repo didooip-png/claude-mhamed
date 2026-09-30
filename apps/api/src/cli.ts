@@ -5,6 +5,7 @@
  *   pnpm --filter @pharmastock/api cli approve-device ID Approuver un poste
  *   pnpm --filter @pharmastock/api cli unlock-user CODE  Déverrouiller un compte
  *   pnpm --filter @pharmastock/api cli verify-audit      Vérifier la chaîne du journal d'audit
+ *   pnpm --filter @pharmastock/api cli backup            Sauvegarde immédiate de la base
  */
 import 'reflect-metadata';
 import { stdin as input, stdout as output } from 'node:process';
@@ -14,6 +15,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { installBigIntJson } from './common/json.js';
 import { AuditService } from './modules/audit/audit.service.js';
+import { BackupService } from './modules/backups/backup.service.js';
 import { SetupService } from './modules/setup/setup.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 
@@ -118,9 +120,14 @@ async function main(): Promise<void> {
         if (!report.ok) process.exitCode = 2;
         break;
       }
+      case 'backup': {
+        const b = await app.get(BackupService).run('MANUAL');
+        console.log(`Sauvegarde créée : ${b.filename} (${Number(b.sizeBytes ?? 0)} octets).`);
+        break;
+      }
       default:
         console.log(
-          'Commandes : setup | devices | approve-device <id> | unlock-user <code> | verify-audit',
+          'Commandes : setup | devices | approve-device <id> | unlock-user <code> | verify-audit | backup',
         );
     }
   } finally {

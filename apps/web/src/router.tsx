@@ -110,6 +110,7 @@ const MyNotificationsPage = lazyPage(
   () => import('@/pages/notifications/my-notifications-page'),
   'MyNotificationsPage',
 );
+const BackupsPage = lazyPage(() => import('@/pages/admin/backups-page'), 'BackupsPage');
 const JobsPage = lazyPage(() => import('@/pages/admin/jobs-page'), 'JobsPage');
 const ReportsPage = lazyPage(() => import('@/pages/reports/reports-page'), 'ReportsPage');
 const PurchaseOrdersPage = lazyPage(
@@ -438,6 +439,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission anyOf={['notifications.email.receive']}>
             <MyNotificationsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'admin/backups',
+        element: (
+          <RequirePermission anyOf={['admin.backups']}>
+            <BackupsPage />
           </RequirePermission>
         ),
       },

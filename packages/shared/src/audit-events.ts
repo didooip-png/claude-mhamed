@@ -91,6 +91,7 @@ const events = {
   DATA_EXPORTED: { severity: 'INFO', label: 'Export de données' },
   BACKUP_CREATED: { severity: 'INFO', label: 'Sauvegarde effectuée' },
   BACKUP_FAILED: { severity: 'CRITICAL', label: 'Sauvegarde échouée' },
+  BACKUP_DOWNLOADED: { severity: 'WARNING', label: 'Sauvegarde téléchargée' },
   BACKUP_RESTORED: { severity: 'CRITICAL', label: 'Sauvegarde restaurée' },
   AUDIT_INTEGRITY_CHECKED: { severity: 'INFO', label: 'Vérification de l’intégrité du journal' },
   AUDIT_INTEGRITY_FAILED: { severity: 'CRITICAL', label: 'Intégrité du journal compromise' },

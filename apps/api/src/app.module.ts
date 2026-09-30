@@ -69,6 +69,8 @@ import { ReportsController } from './modules/reports/reports.controller.js';
 import { ReportsService } from './modules/reports/reports.service.js';
 import { SalesReportsService } from './modules/reports/sales-reports.service.js';
 import { StockReportsService } from './modules/reports/stock-reports.service.js';
+import { BackupService } from './modules/backups/backup.service.js';
+import { BackupsController } from './modules/backups/backups.controller.js';
 import { JobsController } from './modules/jobs/jobs.controller.js';
 import { JobsService } from './modules/jobs/jobs.service.js';
 import { ActivityReportService } from './modules/notifications/activity-report.service.js';
@@ -154,6 +156,7 @@ const config = loadConfig();
     RecallController,
     ReorderController,
     JobsController,
+    BackupsController,
     ReportsController,
     DashboardController,
     PurchaseOrdersController,
@@ -192,6 +195,7 @@ const config = loadConfig();
     PreferencesService,
     DigestService,
     JobsService,
+    BackupService,
     ReportsService,
     PurchaseOrdersService,
     DashboardService,

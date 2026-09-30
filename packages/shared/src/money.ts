@@ -286,3 +286,16 @@ export function amountInWords(amount: Millimes, currencyName = 'dinar'): string 
   if (amount < 0) text = `moins ${text}`;
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Taille lisible (« 12,4 Mo »). */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} o`;
+  const units = ['Ko', 'Mo', 'Go', 'To'];
+  let value = bytes / 1024;
+  let i = 0;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i += 1;
+  }
+  return `${value.toFixed(value >= 100 ? 0 : 1).replace('.', ',')} ${units[i]}`;
+}

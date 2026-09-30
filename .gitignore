@@ -8,7 +8,8 @@ coverage/
 !.env.example
 apps/api/src/generated/
 apps/api/storage/
-backups/
+/backups/
+/apps/api/storage/backups/
 playwright-report/
 test-results/
 .DS_Store
