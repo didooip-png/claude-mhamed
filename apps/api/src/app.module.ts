@@ -58,6 +58,15 @@ import { ReturnsService } from './modules/returns/returns.service.js';
 import { SalesQueriesService } from './modules/sales/sales-queries.service.js';
 import { SalesController } from './modules/sales/sales.controller.js';
 import { SalesService } from './modules/sales/sales.service.js';
+import { DashboardController } from './modules/reports/dashboard.controller.js';
+import { DashboardService } from './modules/reports/dashboard.service.js';
+import { FinanceReportsService } from './modules/reports/finance-reports.service.js';
+import { JournalsReportsService } from './modules/reports/journals-reports.service.js';
+import { ReportExportService } from './modules/reports/report-export.service.js';
+import { ReportsController } from './modules/reports/reports.controller.js';
+import { ReportsService } from './modules/reports/reports.service.js';
+import { SalesReportsService } from './modules/reports/sales-reports.service.js';
+import { StockReportsService } from './modules/reports/stock-reports.service.js';
 import { JobsController } from './modules/jobs/jobs.controller.js';
 import { JobsService } from './modules/jobs/jobs.service.js';
 import { ActivityReportService } from './modules/notifications/activity-report.service.js';
@@ -143,6 +152,8 @@ const config = loadConfig();
     RecallController,
     ReorderController,
     JobsController,
+    ReportsController,
+    DashboardController,
   ],
   providers: [
     UsersService,
@@ -178,6 +189,13 @@ const config = loadConfig();
     PreferencesService,
     DigestService,
     JobsService,
+    ReportsService,
+    DashboardService,
+    SalesReportsService,
+    StockReportsService,
+    FinanceReportsService,
+    JournalsReportsService,
+    ReportExportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SecurityGuard },
     { provide: APP_INTERCEPTOR, useClass: OverrideAuditInterceptor },
