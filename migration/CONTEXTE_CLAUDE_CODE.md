@@ -67,7 +67,7 @@ dernier sans `UPDATE/DELETE` sur les journaux en ajout seul. L'API tourne en **u
   job `docker`, qui prouve que `docker compose -f docker-compose.prod.yml build/up` fonctionne sur un Linux neuf).
 - **Documentation utilisateur** : manuels PDF Administrateur/Préparateur, aide-mémoire d'une page, FAQ (générés depuis le
   logiciel avec captures automatiques), aussi servis par le site sous `/manuels/…`.
-- Historique lisible : `HISTORIQUE.txt` (liste des commits) et `PharmaStock.git.bundle` dans le dossier de migration.
+- Historique lisible : `HISTORIQUE.txt` (liste des commits) ; historique Git complet sur GitHub (branche `claude/intelligent-faraday-dj0t2k`) ou dans le fichier facultatif `PharmaStock-historique-*.git.bundle`.
 
 ### Ce qui n'a PAS pu être vérifié (à valider chez le propriétaire — c'est ta check-list de recette)
 

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Fabrique le dossier de migration téléchargeable (à lancer sur la machine de développement, dépôt propre) :
 #   bash migration/scripts/make-bundle.sh
-# Résultat dans migration-out/ : dossier PharmaStock-migration-AAAAMMJJ/, + .zip + .tar.gz.
-# Contenu : LISEZMOI, guide pour Claude Code, message de démarrage, code (fichiers versionnés uniquement,
-# donc sans .env ni node_modules), historique Git complet (bundle), version, historique, empreintes SHA-256.
+# Résultat dans migration-out/ :
+#   PharmaStock-migration-AAAAMMJJ.zip          dossier à envoyer sur le VPS : LISEZMOI, guide pour Claude Code, message de
+#                                               démarrage, code (fichiers versionnés uniquement : ni .env ni node_modules),
+#                                               version, historique des commits, empreintes SHA-256
+#   PharmaStock-historique-AAAAMMJJ.git.bundle  historique Git complet (facultatif, fourni à part : git clone <fichier>)
+# Le dossier décompressé PharmaStock-migration-AAAAMMJJ/ reste aussi disponible.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -16,7 +19,7 @@ stamp=$(date +%Y%m%d)
 name="PharmaStock-migration-$stamp"
 out="migration-out"
 dir="$out/$name"
-rm -rf "$dir" "$out/$name.zip" "$out/$name.tar.gz"
+rm -rf "$dir" "$out/$name.zip" "$out/$name.tar.gz" "$out/PharmaStock-historique-$stamp.git.bundle"
 mkdir -p "$dir/code"
 
 # 1. Documents pour le propriétaire et pour Claude Code, en tête du dossier
@@ -25,8 +28,8 @@ cp migration/LISEZMOI.md migration/CONTEXTE_CLAUDE_CODE.md migration/PROMPT_CLAU
 # 2. Le code : uniquement les fichiers versionnés
 git archive HEAD | tar -x -C "$dir/code"
 
-# 3. Historique complet (permet de recréer le dépôt : git clone PharmaStock.git.bundle pharmastock)
-git bundle create "$dir/PharmaStock.git.bundle" --all >/dev/null 2>&1
+# 3. Historique complet, à part (permet de recréer le dépôt : git clone PharmaStock-historique-….git.bundle pharmastock)
+git bundle create "$out/PharmaStock-historique-$stamp.git.bundle" --all >/dev/null 2>&1
 
 # 4. Version et historique lisible
 {
@@ -53,8 +56,7 @@ fi
 
 # 6. Empreintes puis archives
 (cd "$dir" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
-tar -czf "$out/$name.tar.gz" -C "$out" "$name"
 (cd "$out" && zip -qr "$name.zip" "$name")
 
 echo "Dossier : $dir"
-ls -lh "$out/$name.zip" "$out/$name.tar.gz"
+ls -lh "$out/$name.zip" "$out/PharmaStock-historique-$stamp.git.bundle"
