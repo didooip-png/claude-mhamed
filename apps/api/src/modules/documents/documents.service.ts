@@ -699,6 +699,117 @@ export class DocumentsService {
   // Rapports tabulaires (exports PDF : mouchard, états…)
   // =========================================================================
 
+  /**
+   * Document A4 générique du stock (bon de retour fournisseur, procès-verbal de destruction,
+   * rapport d'inventaire…) : en-tête de l'établissement, informations, tableau, totaux,
+   * remarques et cadres de signature.
+   */
+  async formPdf(
+    doc: {
+      title: string;
+      number: string;
+      meta: string[];
+      info?: { label: string; value: string }[];
+      columns: {
+        key: string;
+        header: string;
+        width?: number | '*' | 'auto';
+        align?: 'left' | 'right';
+      }[];
+      rows: Record<string, string | number | null>[];
+      totals?: { label: string; value: string }[];
+      notes?: string[];
+      signatures?: string[];
+      landscape?: boolean;
+    },
+    actor: Actor,
+  ): Promise<Buffer> {
+    const e = await this.establishment();
+    const s = e.settings;
+    const content: unknown[] = [
+      ...this.headerA4(e, doc.title, doc.number, doc.meta),
+      ...(doc.info && doc.info.length > 0
+        ? [
+            {
+              table: {
+                widths: [110, '*'],
+                body: doc.info.map((i) => [
+                  { text: i.label, bold: true, color: '#444' },
+                  { text: i.value },
+                ]),
+              },
+              layout: 'noBorders',
+              margin: [0, 0, 0, 10],
+            },
+          ]
+        : []),
+      {
+        table: {
+          headerRows: 1,
+          widths: doc.columns.map((c) => c.width ?? 'auto'),
+          body: [
+            doc.columns.map((c) => ({
+              text: c.header,
+              bold: true,
+              fillColor: '#e6f2f1',
+              alignment: c.align ?? 'left',
+            })),
+            ...doc.rows.map((r) =>
+              doc.columns.map((c) => ({
+                text: r[c.key] === null || r[c.key] === undefined ? '' : String(r[c.key]),
+                alignment: c.align ?? 'left',
+              })),
+            ),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      },
+    ];
+    if (doc.totals && doc.totals.length > 0) {
+      content.push({
+        table: {
+          widths: ['*', 110],
+          body: doc.totals.map((t) => [
+            { text: t.label, alignment: 'right', bold: true },
+            { text: t.value, alignment: 'right', bold: true },
+          ]),
+        },
+        layout: 'noBorders',
+        margin: [0, 8, 0, 0],
+      });
+    }
+    for (const note of doc.notes ?? []) {
+      content.push({ text: note, fontSize: 8, color: '#444', margin: [0, 8, 0, 0] });
+    }
+    if (doc.signatures && doc.signatures.length > 0) {
+      content.push({
+        columns: doc.signatures.map((label) => ({
+          stack: [
+            { text: label, bold: true, fontSize: 8 },
+            { canvas: [{ type: 'rect', x: 0, y: 4, w: 150, h: 50, lineWidth: 0.5 }] },
+          ],
+        })),
+        margin: [0, 24, 0, 0],
+        unbreakable: true,
+      });
+    }
+    content.push({
+      text: `Édité le ${formatDateTime(now(), s['general.timezone'])} par ${actor.userCode} — ${actor.userName}`,
+      fontSize: 7,
+      color: '#666',
+      margin: [0, 12, 0, 0],
+    });
+    return renderPdf({
+      pageSize: 'A4',
+      pageOrientation: doc.landscape ? 'landscape' : 'portrait',
+      pageMargins: [36, 36, 36, 44],
+      defaultStyle: { font: 'Roboto', fontSize: 8.5 },
+      info: { title: `${doc.title} ${doc.number}`, author: s['establishment.name'] },
+      footer: this.footer(s),
+      content,
+    });
+  }
+
   /** Tableau A4 paysage avec en-tête de l'établissement ; l'export est tracé (DATA_EXPORTED). */
   async tablePdf(
     report: {

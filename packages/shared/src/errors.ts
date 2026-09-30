@@ -56,6 +56,12 @@ export const ERROR_MESSAGES = {
   ADJUSTMENT_NOT_PENDING: 'Cet ajustement a déjà été traité.',
   INVENTORY_NOT_OPEN: 'Cet inventaire n’est pas en cours.',
   INVENTORY_ALREADY_OPEN: 'Un inventaire couvrant ces produits est déjà en cours.',
+  INVENTORY_UNCOUNTED:
+    'Des lignes de l’inventaire n’ont pas été comptées : comptez-les ou choisissez de les ignorer.',
+  INVENTORY_EMPTY: 'Aucun lot ne correspond à ce périmètre d’inventaire.',
+  LOT_NOT_EXPIRED: 'Seuls les lots périmés, bloqués ou en quarantaine peuvent être détruits.',
+  LOT_SUPPLIER_MISMATCH: 'Ce lot n’a pas été fourni par ce fournisseur.',
+  SUPPLIER_RETURN_NOT_PENDING: 'Ce retour fournisseur n’est plus en attente d’avoir.',
   // Ventes
   CLIENT_REQUIRED: 'L’acheteur est obligatoire : sélectionnez ou créez un client.',
   SALE_NOT_DRAFT: 'Cette vente n’est plus modifiable.',

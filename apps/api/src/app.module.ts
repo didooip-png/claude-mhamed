@@ -58,6 +58,14 @@ import { ReturnsService } from './modules/returns/returns.service.js';
 import { SalesQueriesService } from './modules/sales/sales-queries.service.js';
 import { SalesController } from './modules/sales/sales.controller.js';
 import { SalesService } from './modules/sales/sales.service.js';
+import { AdjustmentsController } from './modules/adjustments/adjustments.controller.js';
+import { AdjustmentsService } from './modules/adjustments/adjustments.service.js';
+import { InventoryController } from './modules/inventory/inventory.controller.js';
+import { InventoryService } from './modules/inventory/inventory.service.js';
+import { RecallController } from './modules/stock/recall.controller.js';
+import { RecallService } from './modules/stock/recall.service.js';
+import { SupplierReturnsController } from './modules/supplier-returns/supplier-returns.controller.js';
+import { SupplierReturnsService } from './modules/supplier-returns/supplier-returns.service.js';
 
 const config = loadConfig();
 
@@ -122,6 +130,10 @@ const config = loadConfig();
     ReturnsController,
     PaymentsController,
     AccountsController,
+    InventoryController,
+    AdjustmentsController,
+    SupplierReturnsController,
+    RecallController,
   ],
   providers: [
     UsersService,
@@ -148,6 +160,10 @@ const config = loadConfig();
     EmailTemplatesService,
     EmailOutboxService,
     NotificationsService,
+    InventoryService,
+    AdjustmentsService,
+    SupplierReturnsService,
+    RecallService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SecurityGuard },
     { provide: APP_INTERCEPTOR, useClass: OverrideAuditInterceptor },

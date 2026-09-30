@@ -99,6 +99,14 @@ const events = {
     employee: true,
   }),
   INVENTORY_READY: e('activity', 'Inventaire prêt à valider', 'IN_APP', { employee: true }),
+  INVENTORY_VALIDATED: e('activity', 'Inventaire validé (écarts corrigés)', 'IN_APP', {
+    threshold: 'amount',
+  }),
+  STOCK_ADJUSTMENT: e('activity', 'Ajustement de stock validé', 'IN_APP', {
+    threshold: 'amount',
+    employee: true,
+  }),
+  SUPPLIER_RETURN: e('activity', 'Retour fournisseur enregistré', 'IN_APP', { employee: true }),
   OUTSIDE_HOURS_ACTIVITY: e('activity', 'Connexion ou opération hors horaires', 'IN_APP', {
     employee: true,
   }),
@@ -108,6 +116,7 @@ const events = {
   // Stock
   STOCK_OUT: e('stock', 'Rupture de stock', 'EMAIL_DAILY'),
   STOCK_LOW: e('stock', 'Passage sous le seuil minimum', 'IN_APP'),
+  LOT_RECALL: e('stock', 'Rappel de lot lancé', 'EMAIL_IMMEDIATE'),
   LOTS_EXPIRING: e('stock', 'Lots proches de la péremption', 'EMAIL_DAILY'),
   LOTS_EXPIRED: e('stock', 'Lots périmés encore en stock', 'EMAIL_DAILY'),
   REORDER_SUGGESTIONS: e('stock', 'Suggestions de réapprovisionnement', 'IN_APP'),
