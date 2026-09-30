@@ -53,3 +53,36 @@ jobs:
         run: |
           pnpm --filter @pharmastock/api build
           pnpm --filter @pharmastock/web build
+
+  docker:
+    # Les images de production se construisent et la pile complète démarre (HTTP, sans domaine).
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configuration de test
+        run: |
+          {
+            echo "POSTGRES_PASSWORD=ci-$(openssl rand -hex 8)"
+            echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -hex 32)"
+            echo "APP_PUBLIC_URL=http://localhost"
+            echo "SITE_ADDRESS=:80"
+            echo "COOKIE_SECURE=false"
+          } > .env.production
+      - name: Construction des images
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production build
+      - name: Démarrage de la pile
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production up -d --wait --wait-timeout 180
+      - name: Vérifications
+        run: |
+          curl -fsS http://localhost/api/v1/health
+          curl -fsS http://localhost/ | grep -qi "<div id=\"root\""
+          curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost/clients   # repli SPA
+          docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api node dist/src/cli.js backup
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail 200
+      - name: Arrêt
+        if: always()
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production down -v

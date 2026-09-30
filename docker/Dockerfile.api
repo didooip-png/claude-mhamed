@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1.7
+# Image de production de l'API PharmaStock (NestJS) — construite depuis la racine du dépôt :
+#   docker build -f docker/Dockerfile.api -t pharmastock-api .
+
+FROM node:22-bookworm-slim AS build
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /repo
+# Dépendances d'abord (couche mise en cache tant que les manifestes ne changent pas).
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY tsconfig.base.json ./
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN pnpm --filter @pharmastock/shared build \
+ && pnpm --filter @pharmastock/api db:generate \
+ && pnpm --filter @pharmastock/api build \
+ && pnpm --filter @pharmastock/api deploy --prod --legacy /out
+
+FROM node:22-bookworm-slim AS runtime
+# Client PostgreSQL 16 (pg_dump / pg_restore) : même version majeure que le serveur.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg tini \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-16 \
+ && apt-get purge -y --auto-remove curl gnupg \
+ && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production \
+    PORT=3000 \
+    STORAGE_DIR=/app/storage \
+    BACKUP_DIR=/app/storage/backups \
+    TRUST_PROXY=true \
+    TZ=Africa/Tunis
+WORKDIR /app
+COPY --from=build --chown=node:node /out ./
+COPY --chown=node:node docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+ && mkdir -p /app/storage/backups && chown -R node:node /app/storage
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint.sh"]
+CMD ["node", "--enable-source-maps", "dist/src/main.js"]

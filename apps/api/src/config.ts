@@ -17,9 +17,9 @@ const envSchema = z.object({
   /** Origines autorisées (CORS), séparées par des virgules. Vide = même origine uniquement. */
   CORS_ORIGINS: z.string().default(''),
   COOKIE_SECURE: z
-    .enum(['true', 'false'])
+    .enum(['true', 'false', ''])
     .optional()
-    .transform((v) => (v === undefined ? undefined : v === 'true')),
+    .transform((v) => (v ? v === 'true' : undefined)),
   STORAGE_DIR: z.string().default('./storage'),
   BACKUP_DIR: z.string().default('./storage/backups'),
   BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),

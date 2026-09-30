@@ -1,0 +1,86 @@
+# Production : PostgreSQL + API + site (Caddy, HTTPS automatique).
+#
+#   cp .env.production.example .env.production      # puis renseigner les secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#   docker compose -f docker-compose.prod.yml --env-file .env.production exec api node dist/src/cli.js setup
+#
+# Voir docs/EXPLOITATION.md (installation, mises à jour, sauvegardes, restauration).
+name: pharmastock
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pharmastock
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire (.env.production)}
+      POSTGRES_DB: pharmastock
+      TZ: ${TZ:-Africa/Tunis}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Aucun port publié : la base n'est joignable que par l'API (réseau interne).
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pharmastock -d pharmastock']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [internal]
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pharmastock:${POSTGRES_PASSWORD}@postgres:5432/pharmastock?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET est obligatoire}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY est obligatoire}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?APP_PUBLIC_URL est obligatoire (ex. https://pharmacie.example.com)}
+      TRUST_PROXY: 'true'
+      # Vide : « Secure » en production. Mettre false uniquement pour un accès HTTP en réseau local.
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      TZ: ${TZ:-Africa/Tunis}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_TIME: ${BACKUP_TIME:-01:30}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - storage:/app/storage
+    # Pas de port publié : seul Caddy (même réseau) joint l'API.
+    networks: [internal]
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+volumes:
+  pgdata:
+  storage: # pièces jointes + sauvegardes locales (/app/storage/backups)
+  caddy_data: # certificats HTTPS : à conserver
+  caddy_config:
+
+networks:
+  internal:

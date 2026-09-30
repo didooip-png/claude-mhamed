@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.env
+.env.*
+!.env.example
+apps/api/storage
+apps/api/storage-test
+apps/api/src/generated
+docs
+e2e
+*.md
+CAHIER_DES_CHARGES_CLAUDE_CODE.md
+farah
